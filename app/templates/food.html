@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<h2 class="title">🍜 Ăn uống</h2>
+
+<!-- FORM -->
+<div class="form-box">
+    <form method="post" action="/food/add">
+        <input name="name" placeholder="Tên quán" required>
+        <input name="address" placeholder="Địa chỉ" required>
+        <input name="note" placeholder="Ghi chú">
+
+        <select name="status">
+            <option value="da_an">Đã ăn</option>
+            <option value="chua_an">Chưa ăn</option>
+            <option value="muon_an">Muốn ăn</option>
+        </select>
+
+        <button type="submit">+ Thêm</button>
+    </form>
+</div>
+
+<!-- LIST -->
+<div class="card-container">
+    {% for f in foods %}
+    <div class="card">
+        <h3>{{ f.name }}</h3>
+        <p class="address">{{ f.address }}</p>
+        <p class="note">{{ f.note }}</p>
+        <p class="status">{{ f.status }}</p>
+    </div>
+    {% endfor %}
+</div>
+
+{% endblock %}

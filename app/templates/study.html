@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="page-wrapper">
+
+    <h2 class="title">☕ Quán cafe học tập</h2>
+
+    <!-- FORM -->
+    <div class="form-box">
+        <form method="post" action="/study/add">
+            <input name="name" placeholder="Tên quán" required>
+            <input name="address" placeholder="Địa chỉ" required>
+            <input name="note" placeholder="Ghi chú">
+            <button type="submit">+ Thêm</button>
+        </form>
+    </div>
+
+    <!-- LIST -->
+    <div class="card-container">
+
+        {% if studies %}
+            {% for s in studies %}
+            <div class="card">
+
+                <div class="card-header">
+                    <h3>☕ {{ s.name }}</h3>
+                </div>
+
+                <div class="card-body">
+                    <p class="address">📍 {{ s.address }}</p>
+                    <p class="note">📝 {{ s.note }}</p>
+                </div>
+
+                <div class="card-footer">
+                    <a href="/study/delete/{{ s.id }}" class="delete-btn">🗑 Xoá</a>
+                </div>
+
+            </div>
+            {% endfor %}
+        {% else %}
+            <p style="color: white;">Chưa có quán nào 😢</p>
+        {% endif %}
+
+    </div>
+
+</div>
+
+{% endblock %}
