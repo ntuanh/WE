@@ -2,35 +2,157 @@
 
 {% block content %}
 
-<h2 class="title">🍜 Ăn uống</h2>
+<div class="food-panel">
 
-<!-- FORM -->
-<div class="form-box">
-    <form method="post" action="/food/add">
-        <input name="name" placeholder="Tên quán" required>
-        <input name="address" placeholder="Địa chỉ" required>
-        <input name="note" placeholder="Ghi chú">
+    <!-- 🔥 FORM KHÔNG ĐƯỢC MẤT -->
+    <div class="form-wrapper">
+        <form method="post" action="/food/add">
+            <input name="name" placeholder="Tên quán" required>
+            <input name="address" placeholder="Địa chỉ" required>
+            <input name="note" placeholder="Ghi chú">
 
-        <select name="status">
-            <option value="da_an">Đã ăn</option>
-            <option value="chua_an">Chưa ăn</option>
-            <option value="muon_an">Muốn ăn</option>
-        </select>
+            <select name="status">
+                <option value="da_an">Đã ăn</option>
+                <option value="chua_an">Chưa ăn</option>
+                <option value="muon_an">Muốn ăn</option>
+            </select>
 
-        <button type="submit">+ Thêm</button>
-    </form>
-</div>
-
-<!-- LIST -->
-<div class="card-container">
-    {% for f in foods %}
-    <div class="card">
-        <h3>{{ f.name }}</h3>
-        <p class="address">{{ f.address }}</p>
-        <p class="note">{{ f.note }}</p>
-        <p class="status">{{ f.status }}</p>
+            <button type="submit">+ Thêm</button>
+        </form>
     </div>
-    {% endfor %}
+
+    <!-- 3 CỘT -->
+    <div class="food-columns">
+
+        <!-- ĐÃ ĂN -->
+        <div class="food-column" data-status="da_an" ondragover="allowDrop(event)" ondrop="drop(event)">
+            <h3>🟢 Đã ăn</h3>
+
+            {% for f in foods %}
+                {% if f.status == "da_an" %}
+                <div class="food-card"
+                     draggable="true"
+                     ondragstart="drag(event)"
+                     id="food-{{ f.id }}">
+
+                    <div class="food-info">
+                        <b>{{ f.name }}</b>
+                        <small>📝 {{ f.note }}</small>
+                    </div>
+
+                    <!-- 🔥 THÊM ĐOẠN NÀY -->
+                    <div class="actions">
+                        <a href="https://www.google.com/maps/search/?api=1&query={{ f.address | replace(' ', '+') }}"
+                               target="_blank"
+                               class="map-link">
+                               📍
+                        </a>
+                        <a href="/food/edit/{{ f.id }}">✏️</a>
+                        <a href="/food/delete/{{ f.id }}">🗑</a>
+                    </div>
+
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <!-- CHƯA ĂN -->
+        <div class="food-column" data-status="chua_an" ondragover="allowDrop(event)" ondrop="drop(event)">
+            <h3>🟡 Chưa ăn</h3>
+
+            {% for f in foods %}
+                {% if f.status == "chua_an" %}
+                <div class="food-card"
+                     draggable="true"
+                     ondragstart="drag(event)"
+                     id="food-{{ f.id }}">
+
+                    <div class="food-info">
+                        <b>{{ f.name }}</b>
+                        <small>📝 {{ f.note }}</small>
+                    </div>
+
+                    <!-- 🔥 THÊM ĐOẠN NÀY -->
+                    <div class="actions">
+                        <a href="https://www.google.com/maps/search/?api=1&query={{ f.address | replace(' ', '+') }}"
+                               target="_blank"
+                               class="map-link">
+                               📍
+                        </a>
+                        <a href="/food/edit/{{ f.id }}">✏️</a>
+                        <a href="/food/delete/{{ f.id }}">🗑</a>
+                    </div>
+
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+        <!-- MUỐN ĂN -->
+        <div class="food-column" data-status="muon_an" ondragover="allowDrop(event)" ondrop="drop(event)">
+            <h3>🔴 Muốn ăn</h3>
+
+            {% for f in foods %}
+                {% if f.status == "muon_an" %}
+                <div class="food-card"
+                     draggable="true"
+                     ondragstart="drag(event)"
+                     id="food-{{ f.id }}">
+
+                    <div class="food-info">
+                        <b>{{ f.name }}</b>
+                        <small>📝 {{ f.note }}</small>
+                    </div>
+
+                    <!-- 🔥 THÊM ĐOẠN NÀY -->
+                    <div class="actions">
+                        <a href="https://www.google.com/maps/search/?api=1&query={{ f.address | replace(' ', '+') }}"
+                               target="_blank"
+                               class="map-link">
+                               📍
+                        </a>
+                        <a href="/food/edit/{{ f.id }}">✏️</a>
+                        <a href="/food/delete/{{ f.id }}">🗑</a>
+                    </div>
+
+                </div>
+                {% endif %}
+            {% endfor %}
+        </div>
+
+    </div>
+
 </div>
+
+<script>
+function drag(event) {
+    event.dataTransfer.setData("text", event.target.id);
+}
+
+function allowDrop(event) {
+    event.preventDefault();
+}
+
+function drop(event) {
+    event.preventDefault();
+
+    let cardId = event.dataTransfer.getData("text");
+    let card = document.getElementById(cardId);
+
+    let column = event.currentTarget;
+    column.appendChild(card);
+
+    let foodId = cardId.split("-")[1];
+    let newStatus = column.getAttribute("data-status");
+
+    fetch(`/food/update-status/${foodId}`, {
+        method: "POST",
+        headers: {
+            "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ status: newStatus })
+    });
+}
+</script>
 
 {% endblock %}

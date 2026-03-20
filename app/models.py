@@ -18,3 +18,14 @@ class StudyPlace(Base):
     name = Column(String)
     address = Column(String)
     note = Column(String)
+
+class Plan(Base):
+    __tablename__ = "plans"
+
+    id = Column(Integer, primary_key=True, index=True)
+    title = Column(String)
+    script = Column(String)
+
+    done = Column(Integer, default=0)      # 0 = chưa xong
+    priority = Column(String, default="normal")  # low / normal / high
+    deadline = Column(String, default="")

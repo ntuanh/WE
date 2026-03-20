@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="study-panel">
+
+    <!-- FORM -->
+    <div class="form-wrapper">
+        <form method="post" action="/plan/add">
+            <input name="title" placeholder="Tiêu đề" required>
+            <input name="script" placeholder="Mô tả">
+
+            <select name="priority">
+                <option value="low">Low</option>
+                <option value="normal">Normal</option>
+                <option value="high">High</option>
+            </select>
+
+            <input type="date" name="deadline">
+
+            <button type="submit">+ Thêm</button>
+        </form>
+    </div>
+
+    <!-- LIST -->
+    <div class="list-wrapper">
+
+        {% for p in plans %}
+        <div class="plan-row {% if p.done %}done{% endif %}">
+
+            <!-- CHECKBOX -->
+            <input type="checkbox"
+                   {% if p.done %}checked{% endif %}
+                   onchange="toggleDone({{ p.id }}, this.checked)">
+
+            <!-- TEXT -->
+            <div class="plan-text">
+                <b>{{ p.title }}</b>
+                <span>{{ p.script }}</span>
+            </div>
+
+            <!-- META -->
+            <div class="plan-meta">
+
+                <span class="priority {{ p.priority }}">
+                    {{ p.priority }}
+                </span>
+
+                {% if p.deadline %}
+                <span class="deadline">
+                    📅 {{ p.deadline }}
+                </span>
+                {% endif %}
+
+            </div>
+
+            <!-- ACTION -->
+            <div class="actions">
+                <a href="/plan/delete/{{ p.id }}">🗑</a>
+            </div>
+
+        </div>
+        {% endfor %}
+
+    </div>
+
+</div>
+
+<script>
+function toggleDone(id, checked) {
+    fetch(`/plan/toggle/${id}`, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({ done: checked ? 1 : 0 })
+    });
+}
+</script>
+
+{% endblock %}

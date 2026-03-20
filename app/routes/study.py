@@ -16,9 +16,9 @@ def study_page(request: Request):
 
     return templates.TemplateResponse("study.html", {
         "request": request,
-        "studies": studies
+        "studies": studies,
+        "bg": "bghome.mp4"
     })
-
 
 @router.post("/study/add")
 def add_study(name: str = Form(...),
@@ -38,6 +38,36 @@ def delete_study(id: int):
 
     if item:
         db.delete(item)
+        db.commit()
+
+    return RedirectResponse("/study", status_code=303)
+
+# 🔥 SHOW FORM EDIT
+@router.get("/study/edit/{id}")
+def edit_study_page(request: Request, id: int):
+    db = SessionLocal()
+    item = db.query(models.StudyPlace).filter(models.StudyPlace.id == id).first()
+
+    return templates.TemplateResponse("edit_study.html", {
+        "request": request,
+        "item": item
+    })
+
+
+# 🔥 UPDATE DATA
+@router.post("/study/edit/{id}")
+def update_study(id: int,
+                 name: str = Form(...),
+                 address: str = Form(...),
+                 note: str = Form("")):
+
+    db = SessionLocal()
+    item = db.query(models.StudyPlace).filter(models.StudyPlace.id == id).first()
+
+    if item:
+        item.name = name
+        item.address = address
+        item.note = note
         db.commit()
 
     return RedirectResponse("/study", status_code=303)

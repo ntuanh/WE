@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="study-panel">
+
+    <h2>✏️ Chỉnh sửa quán ăn</h2>
+
+    <form method="post" action="/food/edit/{{ item.id }}">
+        <input name="name" value="{{ item.name }}" required>
+        <input name="address" value="{{ item.address }}" required>
+        <input name="note" value="{{ item.note }}">
+
+        <select name="status">
+            <option value="da_an" {% if item.status == "da_an" %}selected{% endif %}>Đã ăn</option>
+            <option value="chua_an" {% if item.status == "chua_an" %}selected{% endif %}>Chưa ăn</option>
+            <option value="muon_an" {% if item.status == "muon_an" %}selected{% endif %}>Muốn ăn</option>
+        </select>
+
+        <button type="submit">💾 Lưu</button>
+    </form>
+
+</div>
+
+{% endblock %}
