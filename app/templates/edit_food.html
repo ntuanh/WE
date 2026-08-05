@@ -7,9 +7,18 @@
     <h2>✏️ Chỉnh sửa quán ăn</h2>
 
     <form method="post" action="/food/edit/{{ item.id }}">
-        <input name="name" value="{{ item.name }}" required>
-        <input name="address" value="{{ item.address }}" required>
-        <input name="note" value="{{ item.note }}">
+        <input name="name" value="{{ item.name }}" placeholder="Tên quán" required>
+        <input name="address" value="{{ item.address }}" placeholder="Địa chỉ" required>
+        <input name="note" value="{{ item.note }}" placeholder="Ghi chú">
+        <input name="image" value="{{ item.image or '' }}" placeholder="Link ảnh (URL)">
+
+        <select name="rating" title="Đánh giá">
+            {% for r in range(6) %}
+            <option value="{{ r }}" {% if (item.rating or 0)|int == r %}selected{% endif %}>
+                {% if r == 0 %}☆ Chưa chấm{% else %}{{ '★' * r }} {{ r }}{% endif %}
+            </option>
+            {% endfor %}
+        </select>
 
         <select name="status">
             <option value="da_an" {% if item.status == "da_an" %}selected{% endif %}>Đã ăn</option>

@@ -8,6 +8,8 @@ class FoodPlace(Base):
     name = Column(String)
     address = Column(String)
     note = Column(String)
+    image = Column(String, default="")      # link ảnh (URL)
+    rating = Column(Integer, default=0)     # 0-5 sao
     status = Column(String)  # da_an | chua_an | muon_an
 
 

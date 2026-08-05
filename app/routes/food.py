@@ -1,17 +1,16 @@
-from fastapi import APIRouter, Request, Form
-from fastapi.templating import Jinja2Templates
+from fastapi import APIRouter, Request, Form, Body, Depends
 from fastapi.responses import RedirectResponse
+from sqlalchemy.orm import Session
 
-from app.database import SessionLocal
+from app.database import get_db
+from app.templating import templates
 from app import crud, models
 
 router = APIRouter()
-templates = Jinja2Templates(directory="app/templates")
 
 
 @router.get("/food")
-def food_page(request: Request):
-    db = SessionLocal()
+def food_page(request: Request, db: Session = Depends(get_db)):
     foods = crud.get_foods(db)
 
     return templates.TemplateResponse("food.html", {
@@ -25,18 +24,19 @@ def food_page(request: Request):
 def add_food(name: str = Form(...),
              address: str = Form(...),
              note: str = Form(""),
-             status: str = Form(...)):
+             image: str = Form(""),
+             rating: int = Form(0),
+             status: str = Form("muon_an"),
+             db: Session = Depends(get_db)):
 
-    db = SessionLocal()
-    crud.create_food(db, name, address, note, status)
+    crud.create_food(db, name, address, note, status, image, rating)
 
     return RedirectResponse("/food", status_code=303)
 
 
 # 🔥 DELETE
 @router.get("/food/delete/{id}")
-def delete_food(id: int):
-    db = SessionLocal()
+def delete_food(id: int, db: Session = Depends(get_db)):
     item = db.query(models.FoodPlace).filter(models.FoodPlace.id == id).first()
 
     if item:
@@ -48,8 +48,7 @@ def delete_food(id: int):
 
 # 🔥 EDIT PAGE
 @router.get("/food/edit/{id}")
-def edit_food_page(request: Request, id: int):
-    db = SessionLocal()
+def edit_food_page(request: Request, id: int, db: Session = Depends(get_db)):
     item = db.query(models.FoodPlace).filter(models.FoodPlace.id == id).first()
 
     return templates.TemplateResponse("edit_food.html", {
@@ -64,25 +63,27 @@ def update_food(id: int,
                 name: str = Form(...),
                 address: str = Form(...),
                 note: str = Form(""),
-                status: str = Form(...)):
+                image: str = Form(""),
+                rating: int = Form(0),
+                status: str = Form("muon_an"),
+                db: Session = Depends(get_db)):
 
-    db = SessionLocal()
     item = db.query(models.FoodPlace).filter(models.FoodPlace.id == id).first()
 
     if item:
         item.name = name
         item.address = address
         item.note = note
+        item.image = image
+        item.rating = rating
         item.status = status
         db.commit()
 
     return RedirectResponse("/food", status_code=303)
 
-from fastapi import Body
 
 @router.post("/food/update-status/{id}")
-def update_status(id: int, data: dict = Body(...)):
-    db = SessionLocal()
+def update_status(id: int, data: dict = Body(...), db: Session = Depends(get_db)):
     item = db.query(models.FoodPlace).filter(models.FoodPlace.id == id).first()
 
     if item:

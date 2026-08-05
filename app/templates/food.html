@@ -10,6 +10,16 @@
             <input name="name" placeholder="Tên quán" required>
             <input name="address" placeholder="Địa chỉ" required>
             <input name="note" placeholder="Ghi chú">
+            <input name="image" placeholder="Link ảnh (URL)">
+
+            <select name="rating" title="Đánh giá">
+                <option value="0">☆ Chưa chấm</option>
+                <option value="1">★ 1</option>
+                <option value="2">★ 2</option>
+                <option value="3">★ 3</option>
+                <option value="4">★ 4</option>
+                <option value="5">★ 5</option>
+            </select>
 
             <select name="status">
                 <option value="da_an">Đã ăn</option>
@@ -24,101 +34,54 @@
     <!-- 3 CỘT -->
     <div class="food-columns">
 
-        <!-- ĐÃ ĂN -->
-        <div class="food-column" data-status="da_an" ondragover="allowDrop(event)" ondrop="drop(event)">
-            <h3>🟢 Đã ăn</h3>
+        {% set columns = [
+            ('da_an',   '🟢 Đã ăn'),
+            ('chua_an', '🟡 Chưa ăn'),
+            ('muon_an', '🔴 Muốn ăn')
+        ] %}
+
+        {% for status, label in columns %}
+        <div class="food-column" data-status="{{ status }}"
+             ondragover="allowDrop(event)"
+             ondragenter="dragEnter(event)"
+             ondragleave="dragLeave(event)"
+             ondrop="drop(event)">
+
+            <h3>{{ label }}</h3>
 
             {% for f in foods %}
-                {% if f.status == "da_an" %}
+                {% if f.status == status %}
                 <div class="food-card"
                      draggable="true"
                      ondragstart="drag(event)"
                      id="food-{{ f.id }}">
 
+                    <div class="food-photo"
+                         {% if f.image %}style="background-image:url('{{ f.image }}')"{% endif %}></div>
+
                     <div class="food-info">
                         <b>{{ f.name }}</b>
-                        <small>📝 {{ f.note }}</small>
+                        {% if f.note %}<small>📝 {{ f.note }}</small>{% endif %}
+
+                        <div class="rating" title="{{ f.rating or 0 }}/5">
+                            {% for i in range(5) %}
+                            <span class="star {% if i < (f.rating or 0)|int %}on{% endif %}">★</span>
+                            {% endfor %}
+                        </div>
                     </div>
 
-                    <!-- 🔥 THÊM ĐOẠN NÀY -->
                     <div class="actions">
                         <a href="https://www.google.com/maps/search/?api=1&query={{ f.address | replace(' ', '+') }}"
-                               target="_blank"
-                               class="map-link">
-                               📍
-                        </a>
-                        <a href="/food/edit/{{ f.id }}">✏️</a>
-                        <a href="/food/delete/{{ f.id }}">🗑</a>
+                           target="_blank" class="map-link" title="Bản đồ">📍</a>
+                        <a href="/food/edit/{{ f.id }}" title="Sửa">✏️</a>
+                        <a href="/food/delete/{{ f.id }}" title="Xoá">🗑</a>
                     </div>
 
                 </div>
                 {% endif %}
             {% endfor %}
         </div>
-
-        <!-- CHƯA ĂN -->
-        <div class="food-column" data-status="chua_an" ondragover="allowDrop(event)" ondrop="drop(event)">
-            <h3>🟡 Chưa ăn</h3>
-
-            {% for f in foods %}
-                {% if f.status == "chua_an" %}
-                <div class="food-card"
-                     draggable="true"
-                     ondragstart="drag(event)"
-                     id="food-{{ f.id }}">
-
-                    <div class="food-info">
-                        <b>{{ f.name }}</b>
-                        <small>📝 {{ f.note }}</small>
-                    </div>
-
-                    <!-- 🔥 THÊM ĐOẠN NÀY -->
-                    <div class="actions">
-                        <a href="https://www.google.com/maps/search/?api=1&query={{ f.address | replace(' ', '+') }}"
-                               target="_blank"
-                               class="map-link">
-                               📍
-                        </a>
-                        <a href="/food/edit/{{ f.id }}">✏️</a>
-                        <a href="/food/delete/{{ f.id }}">🗑</a>
-                    </div>
-
-                </div>
-                {% endif %}
-            {% endfor %}
-        </div>
-
-        <!-- MUỐN ĂN -->
-        <div class="food-column" data-status="muon_an" ondragover="allowDrop(event)" ondrop="drop(event)">
-            <h3>🔴 Muốn ăn</h3>
-
-            {% for f in foods %}
-                {% if f.status == "muon_an" %}
-                <div class="food-card"
-                     draggable="true"
-                     ondragstart="drag(event)"
-                     id="food-{{ f.id }}">
-
-                    <div class="food-info">
-                        <b>{{ f.name }}</b>
-                        <small>📝 {{ f.note }}</small>
-                    </div>
-
-                    <!-- 🔥 THÊM ĐOẠN NÀY -->
-                    <div class="actions">
-                        <a href="https://www.google.com/maps/search/?api=1&query={{ f.address | replace(' ', '+') }}"
-                               target="_blank"
-                               class="map-link">
-                               📍
-                        </a>
-                        <a href="/food/edit/{{ f.id }}">✏️</a>
-                        <a href="/food/delete/{{ f.id }}">🗑</a>
-                    </div>
-
-                </div>
-                {% endif %}
-            {% endfor %}
-        </div>
+        {% endfor %}
 
     </div>
 
@@ -128,18 +91,20 @@
 function drag(event) {
     event.dataTransfer.setData("text", event.target.id);
 }
-
-function allowDrop(event) {
-    event.preventDefault();
+function allowDrop(event) { event.preventDefault(); }
+function dragEnter(event) { event.currentTarget.classList.add("drag-over"); }
+function dragLeave(event) {
+    if (!event.currentTarget.contains(event.relatedTarget))
+        event.currentTarget.classList.remove("drag-over");
 }
 
 function drop(event) {
     event.preventDefault();
+    let column = event.currentTarget;
+    column.classList.remove("drag-over");
 
     let cardId = event.dataTransfer.getData("text");
     let card = document.getElementById(cardId);
-
-    let column = event.currentTarget;
     column.appendChild(card);
 
     let foodId = cardId.split("-")[1];
@@ -147,9 +112,7 @@ function drop(event) {
 
     fetch(`/food/update-status/${foodId}`, {
         method: "POST",
-        headers: {
-            "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus })
     });
 }

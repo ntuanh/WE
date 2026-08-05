@@ -7,9 +7,9 @@
     <h2>✏️ Chỉnh sửa quán</h2>
 
     <form method="post" action="/study/edit/{{ item.id }}">
-        <input name="name" value="{{ item.name }}" required>
-        <input name="address" value="{{ item.address }}" required>
-        <input name="note" value="{{ item.note }}">
+        <input name="name" value="{{ item.name }}" placeholder="Tên quán" required>
+        <input name="address" value="{{ item.address }}" placeholder="Địa chỉ" required>
+        <input name="note" value="{{ item.note }}" placeholder="Ghi chú">
         <button type="submit">💾 Lưu</button>
     </form>
 

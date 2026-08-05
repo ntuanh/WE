@@ -3,13 +3,15 @@ from . import models
 
 # FOOD
 def get_foods(db: Session):
-    return db.query(models.FoodPlace).all()
+    return db.query(models.FoodPlace).order_by(models.FoodPlace.id.desc()).all()
 
-def create_food(db: Session, name, address, note, status):
+def create_food(db: Session, name, address, note, status, image="", rating=0):
     food = models.FoodPlace(
         name=name,
         address=address,
         note=note,
+        image=image,
+        rating=rating,
         status=status
     )
     db.add(food)
@@ -19,7 +21,7 @@ def create_food(db: Session, name, address, note, status):
 
 # STUDY
 def get_studies(db: Session):
-    return db.query(models.StudyPlace).all()
+    return db.query(models.StudyPlace).order_by(models.StudyPlace.id.desc()).all()
 
 def create_study(db: Session, name, address, note):
     study = models.StudyPlace(
@@ -34,10 +36,16 @@ def create_study(db: Session, name, address, note):
 
 # PLAN
 def get_plans(db: Session):
-    return db.query(models.Plan).all()
+    # chưa xong lên trước, mới nhất lên trên
+    return db.query(models.Plan).order_by(models.Plan.done, models.Plan.id.desc()).all()
 
-def create_plan(db: Session, title, script):
-    plan = models.Plan(title=title, script=script)
+def create_plan(db: Session, title, script, priority="normal", deadline=""):
+    plan = models.Plan(
+        title=title,
+        script=script,
+        priority=priority,
+        deadline=deadline
+    )
     db.add(plan)
     db.commit()
     db.refresh(plan)

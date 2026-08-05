@@ -20,21 +20,14 @@
 
             <div class="row-text">
                 <b>{{ s.name }}</b>
-                <span>• {{ s.note }}</span>
+                {% if s.note %}<span>• {{ s.note }}</span>{% endif %}
             </div>
 
             <div class="actions">
-
                 <a href="https://www.google.com/maps/search/?api=1&query={{ s.address | replace(' ', '+') }}"
-                   target="_blank"
-                   class="map-icon"
-                   title="{{ s.address }}">
-                   📍
-                </a>
-
-                <a href="/study/edit/{{ s.id }}" class="edit-icon">✏️</a>
-                <a href="/study/delete/{{ s.id }}" class="delete-icon">🗑</a>
-
+                   target="_blank" class="map-icon" title="{{ s.address }}">📍</a>
+                <a href="/study/edit/{{ s.id }}" class="edit-icon" title="Sửa">✏️</a>
+                <a href="/study/delete/{{ s.id }}" class="delete-icon" title="Xoá">🗑</a>
             </div>
 
             <!-- 🔥 GIF -->

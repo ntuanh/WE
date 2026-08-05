@@ -1,18 +1,19 @@
 <!DOCTYPE html>
-<html>
+<html lang="vi">
 <head>
     <title>Just us being goofy </title>
 
     <!-- CSS -->
-    <link rel="stylesheet" href="/static/style.css?v=2">
+    <link rel="stylesheet" href="/static/style.css?v=3">
 
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
 </head>
 
 <body>
 
     <!-- VIDEO BACKGROUND -->
-    <video autoplay muted loop id="bg-video">
+    <video autoplay muted loop playsinline id="bg-video">
         <source src="/static/{{ bg if bg else 'bghome.mp4' }}?v=2" type="video/mp4">
     </video>
 
@@ -31,6 +32,17 @@
     <div class="main-content">
         {% block content %}{% endblock %}
     </div>
+
+    <!-- highlight current tab -->
+    <script>
+        (function () {
+            var path = location.pathname.replace(/\/$/, '') || '/';
+            document.querySelectorAll('.navbar a').forEach(function (a) {
+                var href = a.getAttribute('href').replace(/\/$/, '') || '/';
+                if (href === path) a.classList.add('active');
+            });
+        })();
+    </script>
 
     <!-- 🔥 TENOR SCRIPT (PHẢI Ở CUỐI) -->
     <script type="text/javascript" async src="https://tenor.com/embed.js"></script>

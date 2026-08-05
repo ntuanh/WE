@@ -23,40 +23,29 @@
     </div>
 
     <!-- LIST -->
-    <div class="list-wrapper">
+    <div class="list-wrapper" style="display:block">
 
         {% for p in plans %}
         <div class="plan-row {% if p.done %}done{% endif %}">
 
-            <!-- CHECKBOX -->
             <input type="checkbox"
                    {% if p.done %}checked{% endif %}
                    onchange="toggleDone({{ p.id }}, this.checked)">
 
-            <!-- TEXT -->
             <div class="plan-text">
                 <b>{{ p.title }}</b>
-                <span>{{ p.script }}</span>
+                {% if p.script %}<span>{{ p.script }}</span>{% endif %}
             </div>
 
-            <!-- META -->
             <div class="plan-meta">
-
-                <span class="priority {{ p.priority }}">
-                    {{ p.priority }}
-                </span>
-
+                <span class="priority {{ p.priority }}">{{ p.priority }}</span>
                 {% if p.deadline %}
-                <span class="deadline">
-                    📅 {{ p.deadline }}
-                </span>
+                <span class="deadline">📅 {{ p.deadline }}</span>
                 {% endif %}
-
             </div>
 
-            <!-- ACTION -->
             <div class="actions">
-                <a href="/plan/delete/{{ p.id }}">🗑</a>
+                <a href="/plan/delete/{{ p.id }}" title="Xoá">🗑</a>
             </div>
 
         </div>
@@ -68,9 +57,11 @@
 
 <script>
 function toggleDone(id, checked) {
+    var row = event.target.closest(".plan-row");
+    if (row) row.classList.toggle("done", checked);
     fetch(`/plan/toggle/${id}`, {
         method: "POST",
-        headers: {"Content-Type": "application/json"},
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ done: checked ? 1 : 0 })
     });
 }
