@@ -13,8 +13,7 @@ router = APIRouter()
 def plan_page(request: Request, db: Session = Depends(get_db)):
     plans = crud.get_plans(db)
 
-    return templates.TemplateResponse("plan.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "plan.html", {
         "plans": plans,
         "bg": "bgfood.mp4"
     })

@@ -25,8 +25,7 @@ app.mount("/static", StaticFiles(directory=STATIC_DIR, check_dir=False), name="s
 # 🔥 HOME
 @app.get("/")
 def home(request: Request):
-    return templates.TemplateResponse("index.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "index.html", {
         "bg": "bghome.mp4"
     })
 

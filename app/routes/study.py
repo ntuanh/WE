@@ -13,8 +13,7 @@ router = APIRouter()
 def study_page(request: Request, db: Session = Depends(get_db)):
     studies = crud.get_studies(db)
 
-    return templates.TemplateResponse("study.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "study.html", {
         "studies": studies,
         "bg": "bghome.mp4"
     })
@@ -47,8 +46,7 @@ def delete_study(id: int, db: Session = Depends(get_db)):
 def edit_study_page(request: Request, id: int, db: Session = Depends(get_db)):
     item = db.query(models.StudyPlace).filter(models.StudyPlace.id == id).first()
 
-    return templates.TemplateResponse("edit_study.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "edit_study.html", {
         "item": item
     })
 

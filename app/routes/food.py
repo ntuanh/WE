@@ -13,8 +13,7 @@ router = APIRouter()
 def food_page(request: Request, db: Session = Depends(get_db)):
     foods = crud.get_foods(db)
 
-    return templates.TemplateResponse("food.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "food.html", {
         "foods": foods,
         "bg": "bgfood.mp4"
     })
@@ -51,8 +50,7 @@ def delete_food(id: int, db: Session = Depends(get_db)):
 def edit_food_page(request: Request, id: int, db: Session = Depends(get_db)):
     item = db.query(models.FoodPlace).filter(models.FoodPlace.id == id).first()
 
-    return templates.TemplateResponse("edit_food.html", {
-        "request": request,
+    return templates.TemplateResponse(request, "edit_food.html", {
         "item": item
     })
 
