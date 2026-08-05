@@ -21,12 +21,14 @@ def _database_url() -> str:
             url = url.replace("postgres://", "postgresql://", 1)
         return url
 
-    if os.environ.get("VERCEL"):
-        # No DB configured on Vercel — boot on a throwaway file so the site
-        # still renders instead of 500-ing. Data resets on every cold start.
-        return "sqlite:////tmp/we.db"
+    # No DB configured. Locally that means we.db next to the code; on a
+    # read-only serverless filesystem that write would fail and take every
+    # DB-backed page down, so fall back to /tmp. Testing writability beats
+    # sniffing $VERCEL — it holds whatever the host calls itself.
+    if os.access(BASE_DIR, os.W_OK):
+        return "sqlite:///" + os.path.join(BASE_DIR, "we.db")
 
-    return "sqlite:///" + os.path.join(BASE_DIR, "we.db")
+    return "sqlite:////tmp/we.db"  # ephemeral: resets on every cold start
 
 
 SQLALCHEMY_DATABASE_URL = _database_url()
