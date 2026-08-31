@@ -810,82 +810,302 @@ button:active { transform: translateY(0); }
 
 .navbar a.nav-logout:hover { background: oklch(0.70 0.15 25 / 0.12); }
 
+@media (max-width: 520px) {
+  .nav-user { padding: 8px 10px 8px 12px; font-size: 13px; }
+  .navbar a.nav-logout { padding-left: 10px; padding-right: 11px; }
+}
+
+/* =========================================================
+   MAN HINH DANG NHAP
+   Chua dang nhap thi khong tai video/anh nao (xem base.html),
+   nen toan bo nen o day ve bang CSS.
+   ========================================================= */
+
+/* ---------- nen dong ---------- */
+.auth-bg {
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  overflow: hidden;
+  background:
+    radial-gradient(120% 100% at 50% -10%, oklch(0.42 0.09 30), transparent 65%),
+    linear-gradient(165deg, oklch(0.30 0.06 25), oklch(0.22 0.04 320) 55%, oklch(0.26 0.05 60));
+}
+
+/* Ba quang mau troi cham — thay cho video, khong lo gi ma van co chuyen dong. */
+.auth-blob {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(70px);
+  opacity: 0.5;
+  will-change: transform;
+}
+
+.blob-1 {
+  width: 44vmax; height: 44vmax;
+  top: -14vmax; left: -10vmax;
+  background: var(--coral);
+  animation: drift-1 22s ease-in-out infinite;
+}
+
+.blob-2 {
+  width: 38vmax; height: 38vmax;
+  bottom: -14vmax; right: -8vmax;
+  background: var(--rose);
+  animation: drift-2 26s ease-in-out infinite;
+}
+
+.blob-3 {
+  width: 30vmax; height: 30vmax;
+  top: 38%; left: 52%;
+  background: var(--gold);
+  opacity: 0.35;
+  animation: drift-3 30s ease-in-out infinite;
+}
+
+@keyframes drift-1 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(6vmax, 5vmax) scale(1.12); }
+}
+
+@keyframes drift-2 {
+  0%, 100% { transform: translate(0, 0) scale(1); }
+  50%      { transform: translate(-7vmax, -4vmax) scale(1.08); }
+}
+
+@keyframes drift-3 {
+  0%, 100% { transform: translate(-50%, -50%) scale(1); }
+  50%      { transform: translate(-58%, -60%) scale(1.2); }
+}
+
+/* Lop hat mo nhe cho do "phang" */
+.auth-bg::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(oklch(1 0 0 / 0.05) 1px, transparent 1px);
+  background-size: 3px 3px;
+  opacity: 0.5;
+}
+
+/* ---------- tim bay len ---------- */
+.auth-hearts {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+
+.auth-hearts span {
+  position: absolute;
+  bottom: -6vh;
+  left: calc(var(--i) * 11% + 4%);
+  font-size: calc(15px + (var(--i) * 1.7px));
+  color: oklch(1 0 0 / 0.34);
+  text-shadow: 0 0 12px oklch(1 0 0 / 0.25);
+  animation: float-up 15s linear infinite;
+  animation-delay: calc(var(--i) * -1.9s);
+}
+
+@keyframes float-up {
+  0%   { transform: translateY(0) rotate(0deg);        opacity: 0; }
+  12%  {                                               opacity: 1; }
+  85%  {                                               opacity: 1; }
+  100% { transform: translateY(-108vh) rotate(300deg); opacity: 0; }
+}
+
+/* ---------- the dang nhap ---------- */
 .login-wrap {
-  min-height: 68vh;
+  /* tru phan padding cua .main-content de the nam dung giua man hinh */
+  min-height: calc(100vh - 114px);
   display: grid;
   place-items: center;
-  animation: rise 0.5s ease both;
+  padding: 16px;
 }
 
 .login-card {
-  width: min(380px, 100%);
+  position: relative;
+  width: min(390px, 100%);
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 30px 26px 26px;
-  background: var(--glass);
-  border: 1px solid var(--glass-brd);
-  border-radius: var(--r);
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(18px) saturate(1.3);
+  gap: 14px;
+  padding: 40px 30px 30px;
+  background: oklch(0.99 0.008 70 / 0.94);
+  border: 1px solid oklch(1 0 0 / 0.75);
+  border-radius: 26px;
+  box-shadow:
+    0 30px 70px -25px oklch(0.20 0.06 30 / 0.6),
+    inset 0 1px 0 oklch(1 0 0 / 0.7);
+  backdrop-filter: blur(22px) saturate(1.4);
+  animation: card-in 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes card-in {
+  from { opacity: 0; transform: translateY(26px) scale(0.96); }
+  to   { opacity: 1; transform: translateY(0)    scale(1); }
+}
+
+/* Vien sang chay quanh the — khong dung anh, chi la gradient xoay. */
+.login-card::before {
+  content: "";
+  position: absolute;
+  inset: -14px;
+  z-index: -1;
+  border-radius: 38px;
+  background: conic-gradient(from 0deg,
+    var(--coral), var(--gold), var(--rose), var(--coral));
+  opacity: 0.45;
+  filter: blur(26px);
+  animation: halo 9s linear infinite;
+}
+
+@keyframes halo { to { transform: rotate(1turn); } }
+
+.login-badge {
+  position: absolute;
+  top: -26px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 54px;
+  height: 54px;
+  display: grid;
+  place-items: center;
+  font-size: 26px;
+  background: linear-gradient(140deg, oklch(1 0 0 / 0.95), oklch(0.97 0.02 40 / 0.9));
+  border: 1px solid oklch(1 0 0 / 0.8);
+  border-radius: 50%;
+  box-shadow: 0 12px 26px -12px oklch(0.30 0.06 30 / 0.7);
+  animation: beat 2.6s ease-in-out infinite;
+}
+
+@keyframes beat {
+  0%, 100%  { transform: translateX(-50%) scale(1); }
+  14%       { transform: translateX(-50%) scale(1.16); }
+  28%       { transform: translateX(-50%) scale(1); }
+  42%       { transform: translateX(-50%) scale(1.1); }
 }
 
 .login-title {
   font-family: 'Quicksand', sans-serif;
-  font-size: 23px;
+  font-size: 25px;
   font-weight: 700;
   text-align: center;
-  margin: 0;
+  margin: 6px 0 0;
+  background: linear-gradient(100deg, oklch(0.55 0.17 25), oklch(0.52 0.15 350), oklch(0.58 0.14 45), oklch(0.55 0.17 25));
+  background-size: 200% auto;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: shimmer 6s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%, 100% { background-position: 0% center; }
+  50%      { background-position: 100% center; }
 }
 
 .login-sub {
   font-size: 14px;
   color: var(--ink-soft);
   text-align: center;
-  margin: -6px 0 6px;
+  margin: -8px 0 4px;
 }
 
 .login-error {
   font-size: 14px;
   color: var(--coral-deep);
-  background: oklch(0.70 0.15 25 / 0.12);
+  background: oklch(0.70 0.15 25 / 0.14);
+  border: 1px solid oklch(0.70 0.15 25 / 0.25);
   border-radius: var(--r-sm);
   padding: 10px 14px;
   margin: 0;
+  text-align: center;
 }
 
-.login-card input {
+/* Sai mat khau thi the rung mot cai — bao ngay ma khong can doc chu. */
+.login-card.shake {
+  animation: card-in 0.65s cubic-bezier(0.22, 1, 0.36, 1) both,
+             shake 0.5s 0.1s both;
+}
+
+@keyframes shake {
+  10%, 90% { transform: translateX(-2px); }
+  20%, 80% { transform: translateX(4px); }
+  30%, 50%, 70% { transform: translateX(-7px); }
+  40%, 60% { transform: translateX(7px); }
+}
+
+/* ---------- o nhap voi nhan tu troi len ---------- */
+.field { position: relative; display: block; }
+
+.login-card .field input {
+  width: 100%;
   font-family: inherit;
   font-size: 15px;
   color: var(--ink);
-  padding: 12px 15px;
-  background: oklch(1 0 0 / 0.85);
+  padding: 19px 15px 8px;
+  background: oklch(1 0 0 / 0.8);
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
   outline: none;
-  transition: border-color 0.15s, box-shadow 0.15s;
+  transition: border-color 0.18s, box-shadow 0.18s, background 0.18s;
 }
 
-.login-card input::placeholder { color: oklch(0.62 0.01 60); }
+.field-label {
+  position: absolute;
+  top: 13px;
+  left: 16px;
+  font-size: 15px;
+  color: oklch(0.62 0.01 60);
+  pointer-events: none;
+  transform-origin: left top;
+  transition: transform 0.18s cubic-bezier(0.22, 1, 0.36, 1), color 0.18s;
+}
 
-.login-card input:focus {
+/* O trong va chua focus -> nhan nam giua; con lai -> nhan thu nho, len tren */
+.field input:focus + .field-label,
+.field input:not(:placeholder-shown) + .field-label {
+  transform: translateY(-9px) scale(0.75);
+  color: var(--coral-deep);
+}
+
+.login-card .field input:focus {
   border-color: var(--coral);
+  background: oklch(1 0 0 / 0.95);
   box-shadow: 0 0 0 3px oklch(0.70 0.15 25 / 0.18);
 }
 
-.login-card button { width: 100%; margin-top: 4px; padding: 13px; }
-
-@media (max-width: 520px) {
-  .nav-user { padding: 8px 10px 8px 12px; font-size: 13px; }
-  .navbar a.nav-logout { padding-left: 10px; padding-right: 11px; }
+/* ---------- nut ---------- */
+.login-btn {
+  position: relative;
+  overflow: hidden;
+  width: 100%;
+  margin-top: 6px;
+  padding: 14px;
+  font-size: 16px;
 }
 
-/* Goi y hien khi chua cau hinh tai khoan nao (xem app/auth.py NO_ACCOUNTS). */
+/* Vet sang luot qua khi ro chuot */
+.login-btn::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -120%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(100deg, transparent, oklch(1 0 0 / 0.4), transparent);
+  transition: left 0.55s ease;
+}
+
+.login-btn:hover::after { left: 130%; }
+
+.login-btn:active { transform: translateY(1px) scale(0.99); }
+
+/* ---------- goi y khi chua cau hinh tai khoan (xem app/auth.py NO_ACCOUNTS) ---------- */
 .login-hint {
-  margin: 4px 0 12px;
+  margin: 0;
   font-size: 13px;
-  line-height: 1.5;
-  color: var(--muted, oklch(0.45 0.02 60));
+  line-height: 1.55;
+  color: var(--ink-soft);
   text-align: center;
 }
 
@@ -896,3 +1116,27 @@ button:active { transform: translateY(0); }
   border: 1px solid var(--line);
   font-size: 12px;
 }
+
+/* ---------- man hinh nho ---------- */
+@media (max-width: 520px) {
+  .login-card { padding: 36px 22px 26px; }
+  .login-title { font-size: 22px; }
+  .auth-blob { filter: blur(50px); }
+}
+
+/* ---------- ton trong nguoi tat hieu ung chuyen dong ---------- */
+@media (prefers-reduced-motion: reduce) {
+  .auth-blob,
+  .auth-hearts span,
+  .login-card,
+  .login-card::before,
+  .login-badge,
+  .login-title,
+  .login-card.shake {
+    animation: none !important;
+  }
+
+  .auth-hearts { display: none; }
+  .login-btn::after { transition: none; }
+}
+

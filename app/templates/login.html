@@ -4,13 +4,15 @@
 
 <div class="login-wrap">
 
-    <form class="login-card" method="post" action="/login">
+    <form class="login-card {% if error %}shake{% endif %}" method="post" action="/login">
 
-        <h1 class="login-title">Just us being goofy ♡</h1>
-        <p class="login-sub">Đăng nhập rồi mới xem được nha</p>
+        <div class="login-badge" aria-hidden="true">💖</div>
+
+        <h1 class="login-title">Just us being goofy</h1>
+        <p class="login-sub">Đăng nhập rồi mới xem được nha ♡</p>
 
         {% if error %}
-        <p class="login-error">{{ error }}</p>
+        <p class="login-error" role="alert">{{ error }}</p>
         {% endif %}
 
         {% if no_accounts %}
@@ -23,13 +25,24 @@
 
         <input type="hidden" name="next" value="{{ next }}">
 
-        <input name="username" placeholder="Tên đăng nhập" value="{{ username if username else '' }}"
-               autocomplete="username" autocapitalize="off" spellcheck="false" autofocus required>
+        {# Placeholder để trống một dấu cách: :placeholder-shown mới nhận ra ô
+           đang rỗng, nhờ vậy nhãn tự trôi lên mà không cần một dòng JS nào. #}
+        <label class="field">
+            <input name="username" placeholder=" " value="{{ username if username else '' }}"
+                   autocomplete="username" autocapitalize="off" spellcheck="false"
+                   autofocus required>
+            <span class="field-label">Tên đăng nhập</span>
+        </label>
 
-        <input name="password" type="password" placeholder="Mật khẩu"
-               autocomplete="current-password" required>
+        <label class="field">
+            <input name="password" type="password" placeholder=" "
+                   autocomplete="current-password" required>
+            <span class="field-label">Mật khẩu</span>
+        </label>
 
-        <button type="submit">Vào thôi 💖</button>
+        <button type="submit" class="login-btn">
+            <span>Vào thôi</span> 💖
+        </button>
 
     </form>
 

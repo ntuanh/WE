@@ -1,30 +1,48 @@
 <!DOCTYPE html>
+{% set signed_in = request.state.user %}
 <html lang="vi">
 <head>
-    <title>Just us being goofy ♡</title>
+    {# Chưa đăng nhập thì đến cái tên cũng không hiện — tab trình duyệt và lịch
+       sử duyệt web là chỗ người khác liếc thấy dễ nhất. #}
+    <title>{% if signed_in %}Just us being goofy ♡{% else %}Đăng nhập{% endif %}</title>
 
     <!-- FAVICON — inline SVG, nên browser không đi hỏi /favicon.ico nữa -->
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>%F0%9F%92%96</text></svg>">
 
     <!-- CSS -->
-    <link rel="stylesheet" href="/static/style.css?v=5">
+    <link rel="stylesheet" href="/static/style.css?v=6">
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="robots" content="noindex, nofollow">
 </head>
 
-<body>
+<body class="{% if signed_in %}is-in{% else %}is-out{% endif %}">
 
-    <!-- VIDEO BACKGROUND -->
+    {% if signed_in %}
+    <!-- VIDEO BACKGROUND — chỉ tải sau khi đăng nhập. Video là ảnh riêng của
+         hai đứa, để nó chạy ở màn hình đăng nhập là ai đi ngang cũng xem được. -->
     <video autoplay muted loop playsinline id="bg-video">
         <source src="/static/{{ bg if bg else 'bghome.mp4' }}?v=2" type="video/mp4">
     </video>
 
-    <!-- OVERLAY -->
     <div class="overlay"></div>
+    {% else %}
+    <!-- Nền cho màn hình đăng nhập: vẽ hoàn toàn bằng CSS, không tải ảnh hay
+         video nào — không có gì để lộ, mà cũng không tốn băng thông. -->
+    <div class="auth-bg" aria-hidden="true">
+        <span class="auth-blob blob-1"></span>
+        <span class="auth-blob blob-2"></span>
+        <span class="auth-blob blob-3"></span>
 
-    <!-- NAVBAR — chỉ hiện khi đã đăng nhập -->
-    {% if request.state.user %}
+        <div class="auth-hearts">
+            {% for i in range(9) %}<span style="--i: {{ i }}">♥</span>{% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if signed_in %}
+    <!-- NAVBAR -->
     <div class="navbar">
         <a href="/">Home</a>
         <a href="/food">Ăn uống</a>
@@ -45,6 +63,7 @@
         {% block content %}{% endblock %}
     </div>
 
+    {% if signed_in %}
     <!-- highlight current tab -->
     <script>
         (function () {
@@ -56,8 +75,10 @@
         })();
     </script>
 
-    <!-- 🔥 TENOR SCRIPT (PHẢI Ở CUỐI) -->
+    <!-- 🔥 TENOR SCRIPT (PHẢI Ở CUỐI) — cũng chỉ tải sau khi đăng nhập, để
+         màn hình đăng nhập không gọi ra máy chủ bên ngoài nào cả. -->
     <script type="text/javascript" async src="https://tenor.com/embed.js"></script>
+    {% endif %}
 
 </body>
 </html>

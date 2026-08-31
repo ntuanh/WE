@@ -431,3 +431,79 @@ def test_khong_co_bam_mat_khau_nao_nam_trong_ma_nguon():
         # chuỗi 64 ký tự hex đứng cạnh chữ "hash" = một băm mật khẩu thật
         assert not re.search(r'hash"?\s*:\s*"[0-9a-f]{64}"', noi_dung), \
             f"co ve nhu {f.name} dang chua mot bam mat khau that"
+
+
+# ------------------------- 6. chưa đăng nhập thì không lộ gì ra ngoài
+
+# Những thứ chỉ được phép xuất hiện sau khi đã đăng nhập.
+RIENG_TU = [
+    ("bg-video", "thẻ video nền"),
+    (".mp4", "đường dẫn file video"),
+    ("bghome", "tên file video nhà"),
+    ("bgfood", "tên file video đồ ăn"),
+    ("tenor.com", "script của bên thứ ba"),
+    ('class="navbar"', "thanh điều hướng"),
+]
+
+
+@pytest.mark.parametrize("dau_vet, ten", RIENG_TU)
+def test_trang_login_khong_lo_gi(client, dau_vet, ten):
+    """Video nền là ảnh riêng của hai người — để nó chạy ở màn hình đăng nhập
+    thì ai đi ngang qua cũng xem được mà không cần mật khẩu."""
+    html = client.get("/login").text
+
+    assert dau_vet not in html, f"trang login vẫn còn {ten}"
+
+
+def test_trang_login_khong_goi_ra_may_chu_ben_ngoai(client):
+    """Chỉ nên tải CSS của chính mình — không gọi ra ngoài trước khi đăng nhập."""
+    import re
+
+    html = client.get("/login").text
+    ben_ngoai = [u for u in re.findall(r'(?:src|href)="(https?://[^"]+)"', html)]
+
+    assert ben_ngoai == [], f"trang login gọi ra ngoài: {ben_ngoai}"
+
+
+def test_tieu_de_tab_khong_lo_ten_app_khi_chua_dang_nhap(client):
+    """Tab trình duyệt và lịch sử duyệt web là chỗ dễ bị liếc thấy nhất."""
+    html = client.get("/login").text
+
+    assert "<title>Đăng nhập</title>" in html
+    assert "Just us being goofy</title>" not in html
+
+
+def test_trang_login_van_co_nen_rieng(client):
+    """Bỏ video đi rồi thì phải có nền CSS thay thế, không thì trơ trọi."""
+    html = client.get("/login").text
+
+    assert "auth-bg" in html
+    assert "auth-blob" in html
+
+
+@pytest.mark.parametrize("dau_vet, ten", [
+    ("bg-video", "thẻ video nền"),
+    (".mp4", "đường dẫn file video"),
+    ("bghome", "video nền của trang chủ"),
+    ("tenor.com", "script của bên thứ ba"),
+    ('class="navbar"', "thanh điều hướng"),
+])
+def test_dang_nhap_roi_thi_moi_hien_day_du(logged_in, dau_vet, ten):
+    """Mặt còn lại: đăng nhập xong thì video và thanh điều hướng phải quay lại."""
+    html = logged_in.get("/").text
+
+    assert dau_vet in html, f"đăng nhập rồi mà thiếu {ten}"
+
+
+def test_moi_trang_giu_dung_video_cua_no(logged_in):
+    """Mỗi trang có video riêng — đừng để lúc bỏ video khỏi màn hình đăng nhập
+    thì làm hỏng luôn phần chọn video của các trang trong."""
+    assert "bghome" in logged_in.get("/").text
+    assert "bgfood" in logged_in.get("/food").text
+
+
+def test_dang_nhap_roi_thi_khong_con_nen_dang_nhap(logged_in):
+    html = logged_in.get("/").text
+
+    assert "auth-bg" not in html
+    assert "Just us being goofy" in html
