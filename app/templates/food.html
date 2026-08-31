@@ -74,7 +74,9 @@
                         <a href="https://www.google.com/maps/search/?api=1&query={{ f.address | replace(' ', '+') }}"
                            target="_blank" class="map-link" title="Bản đồ">📍</a>
                         <a href="/food/edit/{{ f.id }}" title="Sửa">✏️</a>
-                        <a href="/food/delete/{{ f.id }}" title="Xoá">🗑</a>
+                        <form method="post" action="/food/delete/{{ f.id }}" onsubmit="return confirm('Xoá quán này?')">
+                            <button type="submit" title="Xoá">🗑</button>
+                        </form>
                     </div>
 
                 </div>
@@ -105,6 +107,12 @@ function drop(event) {
 
     let cardId = event.dataTransfer.getData("text");
     let card = document.getElementById(cardId);
+    if (!card) return;
+
+    // nho chi cu de con duong quay ve neu server tu choi
+    let previousColumn = card.parentElement;
+    if (previousColumn === column) return;
+
     column.appendChild(card);
 
     let foodId = cardId.split("-")[1];
@@ -114,6 +122,13 @@ function drop(event) {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus })
+    }).then(function (res) {
+        // Khong throw thi the van nam cot moi trong khi DB giu cot cu —
+        // nhin thi tuong luu roi, F5 phat moi biet la khong.
+        if (!res.ok) throw new Error(res.status);
+    }).catch(function () {
+        previousColumn.appendChild(card);
+        alert("Chua luu duoc, thu lai nha 🥲");
     });
 }
 </script>

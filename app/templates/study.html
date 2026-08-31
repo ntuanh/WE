@@ -27,7 +27,9 @@
                 <a href="https://www.google.com/maps/search/?api=1&query={{ s.address | replace(' ', '+') }}"
                    target="_blank" class="map-icon" title="{{ s.address }}">📍</a>
                 <a href="/study/edit/{{ s.id }}" class="edit-icon" title="Sửa">✏️</a>
-                <a href="/study/delete/{{ s.id }}" class="delete-icon" title="Xoá">🗑</a>
+                <form method="post" action="/study/delete/{{ s.id }}" onsubmit="return confirm('Xoá chỗ này?')">
+                    <button type="submit" title="Xoá">🗑</button>
+                </form>
             </div>
 
             <!-- 🔥 GIF -->

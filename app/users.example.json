@@ -1,0 +1,16 @@
+{
+  "_huong_dan": [
+    "Chep file nay thanh app/users.local.json roi thay bang bam that.",
+    "Tao bam:  python -m app.auth \"mat-khau-cua-ban\"",
+    "users.local.json da nam trong .gitignore, khong bao gio len GitHub.",
+    "Khi deploy: dan cung noi dung nay vao bien moi truong WE_USERS."
+  ],
+  "ten_dang_nhap": {
+    "hash": "dan-chuoi-64-ky-tu-tu-lenh-o-tren-vao-day",
+    "role": "admin"
+  },
+  "nguoi_thu_hai": {
+    "hash": "mot-chuoi-64-ky-tu-khac",
+    "role": "user"
+  }
+}

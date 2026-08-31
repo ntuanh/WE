@@ -8,3 +8,14 @@ __pycache__/
 .DS_Store
 
 *.zip
+
+# Dữ liệu thật — KHÔNG commit. Trước đây we.db nằm trong git nên mỗi lần
+# pull/checkout là dữ liệu bị ghi đè bằng bản snapshot cũ ("tự dưng reset").
+we.db
+*.db
+*.sqlite3
+we.db.backup-*
+.env
+
+# Bam mat khau that - kho nay cong khai, tuyet doi khong commit.
+app/users.local.json

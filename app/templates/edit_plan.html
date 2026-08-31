@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="study-panel">
+
+    <h2>✏️ Chỉnh sửa kế hoạch</h2>
+
+    <form method="post" action="/plan/edit/{{ item.id }}">
+        <input name="title" value="{{ item.title }}" placeholder="Tiêu đề" required>
+        <input name="script" value="{{ item.script or '' }}" placeholder="Mô tả">
+
+        <select name="priority">
+            {% for p in priorities %}
+            <option value="{{ p }}" {% if item.priority == p %}selected{% endif %}>{{ p }}</option>
+            {% endfor %}
+        </select>
+
+        <input type="date" name="deadline" value="{{ item.deadline or '' }}">
+
+        <button type="submit">💾 Lưu</button>
+    </form>
+
+</div>
+
+{% endblock %}

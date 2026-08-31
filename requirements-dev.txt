@@ -1,0 +1,5 @@
+# Cai them de chay test:  pip install -r requirements-dev.txt
+-r requirements.txt
+
+pytest
+httpx          # TestClient cua Starlette chay tren httpx

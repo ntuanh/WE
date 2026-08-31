@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="login-wrap">
+
+    <form class="login-card" method="post" action="/login">
+
+        <h1 class="login-title">Just us being goofy ♡</h1>
+        <p class="login-sub">Đăng nhập rồi mới xem được nha</p>
+
+        {% if error %}
+        <p class="login-error">{{ error }}</p>
+        {% endif %}
+
+        {% if no_accounts %}
+        <p class="login-hint">
+            Đặt biến môi trường <code>WE_USERS</code>, hoặc tạo file
+            <code>app/users.local.json</code> theo mẫu
+            <code>app/users.example.json</code>.
+        </p>
+        {% endif %}
+
+        <input type="hidden" name="next" value="{{ next }}">
+
+        <input name="username" placeholder="Tên đăng nhập" value="{{ username if username else '' }}"
+               autocomplete="username" autocapitalize="off" spellcheck="false" autofocus required>
+
+        <input name="password" type="password" placeholder="Mật khẩu"
+               autocomplete="current-password" required>
+
+        <button type="submit">Vào thôi 💖</button>
+
+    </form>
+
+</div>
+
+{% endblock %}

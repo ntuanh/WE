@@ -30,7 +30,7 @@
 
             <input type="checkbox"
                    {% if p.done %}checked{% endif %}
-                   onchange="toggleDone({{ p.id }}, this.checked)">
+                   onchange="toggleDone(this, {{ p.id }})">
 
             <div class="plan-text">
                 <b>{{ p.title }}</b>
@@ -45,7 +45,10 @@
             </div>
 
             <div class="actions">
-                <a href="/plan/delete/{{ p.id }}" title="Xoá">🗑</a>
+                <a href="/plan/edit/{{ p.id }}" title="Sửa">✏️</a>
+                <form method="post" action="/plan/delete/{{ p.id }}" onsubmit="return confirm('Xoá kế hoạch này?')">
+                    <button type="submit" title="Xoá">🗑</button>
+                </form>
             </div>
 
         </div>
@@ -56,13 +59,22 @@
 </div>
 
 <script>
-function toggleDone(id, checked) {
-    var row = event.target.closest(".plan-row");
+function toggleDone(box, id) {
+    // Nhan thang o input thay vi doc window.event — Firefox khong co bien do.
+    var checked = box.checked;
+    var row = box.closest(".plan-row");
     if (row) row.classList.toggle("done", checked);
+
     fetch(`/plan/toggle/${id}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ done: checked ? 1 : 0 })
+    }).then(function (res) {
+        if (!res.ok) throw new Error(res.status);
+    }).catch(function () {
+        box.checked = !checked;                              // tra o tick ve cu
+        if (row) row.classList.toggle("done", !checked);
+        alert("Chua luu duoc, thu lai nha 🥲");
     });
 }
 </script>

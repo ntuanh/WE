@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Request, Form, Depends
+from fastapi import APIRouter, Depends, Form, HTTPException, Request
 from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.templating import templates
-from app import crud, models
+from app import crud
 
 router = APIRouter()
 
@@ -30,13 +30,10 @@ def add_study(name: str = Form(...),
     return RedirectResponse("/study", status_code=303)
 
 
-@router.get("/study/delete/{id}")
+# POST chứ không phải GET — xem ghi chú ở app/routes/food.py
+@router.post("/study/delete/{id}")
 def delete_study(id: int, db: Session = Depends(get_db)):
-    item = db.query(models.StudyPlace).filter(models.StudyPlace.id == id).first()
-
-    if item:
-        db.delete(item)
-        db.commit()
+    crud.delete_study(db, id)
 
     return RedirectResponse("/study", status_code=303)
 
@@ -44,7 +41,10 @@ def delete_study(id: int, db: Session = Depends(get_db)):
 # 🔥 SHOW FORM EDIT
 @router.get("/study/edit/{id}")
 def edit_study_page(request: Request, id: int, db: Session = Depends(get_db)):
-    item = db.query(models.StudyPlace).filter(models.StudyPlace.id == id).first()
+    item = crud.get_study(db, id)
+
+    if not item:
+        raise HTTPException(status_code=404, detail="Không tìm thấy chỗ này")
 
     return templates.TemplateResponse(request, "edit_study.html", {
         "item": item
@@ -59,12 +59,7 @@ def update_study(id: int,
                  note: str = Form(""),
                  db: Session = Depends(get_db)):
 
-    item = db.query(models.StudyPlace).filter(models.StudyPlace.id == id).first()
-
-    if item:
-        item.name = name
-        item.address = address
-        item.note = note
-        db.commit()
+    if not crud.update_study(db, id, name, address, note):
+        raise HTTPException(status_code=404, detail="Không tìm thấy chỗ này")
 
     return RedirectResponse("/study", status_code=303)

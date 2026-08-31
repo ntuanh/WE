@@ -7,7 +7,7 @@
     <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>%F0%9F%92%96</text></svg>">
 
     <!-- CSS -->
-    <link rel="stylesheet" href="/static/style.css?v=3">
+    <link rel="stylesheet" href="/static/style.css?v=5">
 
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -23,13 +23,22 @@
     <!-- OVERLAY -->
     <div class="overlay"></div>
 
-    <!-- NAVBAR -->
+    <!-- NAVBAR — chỉ hiện khi đã đăng nhập -->
+    {% if request.state.user %}
     <div class="navbar">
         <a href="/">Home</a>
         <a href="/food">Ăn uống</a>
         <a href="/study">Học tập</a>
         <a href="/plan">Plan</a>
+        <a href="/budget">Chi tiêu</a>
+
+        <span class="nav-user">
+            {{ request.state.user.username }}{% if request.state.user.is_admin %} <b title="admin">★</b>{% endif %}
+        </span>
+
+        <a href="/logout" class="nav-logout">Thoát</a>
     </div>
+    {% endif %}
 
     <!-- CONTENT -->
     <div class="main-content">
