@@ -1,6 +1,9 @@
-fastapi
-uvicorn
-jinja2
-sqlalchemy
-python-multipart
-psycopg2-binary
+# Ghim phien ban: Vercel cai lai moi lan build, khong ghim thi mot ban major
+# moi cua FastAPI/SQLAlchemy co the lam hong deploy vao luc khong ngo nhat.
+# Nang cap: sua so o day, chay `pytest`, roi moi push.
+fastapi==0.135.1
+uvicorn==0.42.0
+jinja2==3.1.6
+sqlalchemy==2.0.48
+python-multipart==0.0.22
+psycopg2-binary==2.9.12

@@ -19,3 +19,4 @@ we.db.backup-*
 
 # Bam mat khau that - kho nay cong khai, tuyet doi khong commit.
 app/users.local.json
+DEPLOY.local.md
