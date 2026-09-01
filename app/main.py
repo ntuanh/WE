@@ -81,7 +81,12 @@ async def require_login(request: Request, call_next):
     response = await call_next(request)
 
     # Trang riêng tư thì đừng để proxy/CDN giữ lại bản sao cho người khác xem.
-    if not _is_public(request.url.path):
+    #
+    # /login cũng phải no-store: nội dung của nó đổi theo cấu hình tài khoản,
+    # mà trước đây trang này (public) không hề có header cache nào — trình duyệt
+    # tự ý giữ lại bản cũ, nên đặt WE_USERS rồi deploy lại vẫn thấy y hệt trang
+    # cũ. Chỉ /static/ mới được phép cache.
+    if not request.url.path.startswith(PUBLIC_PREFIX):
         response.headers.setdefault("Cache-Control", "no-store")
 
     return response
