@@ -6,6 +6,7 @@ we.db
 we.db.backup-*
 *.zip
 LICENSE
+tools/
 tests/
 pytest.ini
 requirements-dev.txt
