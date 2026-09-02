@@ -57,22 +57,47 @@ def _clean_users(parsed) -> dict:
     return users
 
 
+# Vì sao không đọc được tài khoản nào. Trên máy mình thì xem log là ra, nhưng
+# khi deploy thì log nằm tận trong dashboard — nên câu này hiện thẳng lên trang
+# login, đỡ phải đoán mò giữa "quên đặt biến" và "đặt rồi mà dán sai".
+LOAD_NOTE = ""
+
+
 def _load_users() -> dict:
     """Đọc danh sách tài khoản từ WE_USERS, hoặc từ users.local.json."""
+    global LOAD_NOTE
+
     raw = os.environ.get("WE_USERS", "").strip()
 
     if raw:
         try:
-            return _clean_users(json.loads(raw))
+            users = _clean_users(json.loads(raw))
         except (ValueError, TypeError) as exc:
+            LOAD_NOTE = ("WE_USERS có đặt nhưng không phải JSON hợp lệ — dán "
+                         "thiếu ngoặc, hoặc lỡ bọc thêm dấu nháy quanh nó.")
             log(f"[auth] WE_USERS khong phai JSON hop le: {exc!r}")
+        else:
+            if users:
+                return users
+
+            LOAD_NOTE = ('WE_USERS đọc được nhưng không có mục nào đúng dạng '
+                         '{"tên": {"hash": "..."}} — thiếu khoá "hash" chăng?')
+            log("[auth] WE_USERS khong co muc nao dung dang")
 
     try:
         with open(USERS_FILE, encoding="utf-8") as f:
-            return _clean_users(json.load(f))
+            users = _clean_users(json.load(f))
+
+        if users:
+            return users
+
+        LOAD_NOTE = f"{os.path.basename(USERS_FILE)} không có mục nào dùng được."
     except FileNotFoundError:
-        pass
+        if not raw:
+            LOAD_NOTE = ("Chưa thấy biến môi trường WE_USERS, cũng không có "
+                         "file app/users.local.json.")
     except (ValueError, OSError) as exc:
+        LOAD_NOTE = f"Đọc {os.path.basename(USERS_FILE)} thất bại."
         log(f"[auth] doc {USERS_FILE} that bai: {exc!r}")
 
     return {}

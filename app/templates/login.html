@@ -17,6 +17,7 @@
 
         {% if no_accounts %}
         <p class="login-hint">
+            {% if load_note %}{{ load_note }}<br>{% endif %}
             Đặt biến môi trường <code>WE_USERS</code>, hoặc tạo file
             <code>app/users.local.json</code> theo mẫu
             <code>app/users.example.json</code>.

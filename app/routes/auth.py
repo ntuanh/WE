@@ -30,6 +30,7 @@ def _render_login(request: Request, next_url: str, error: str = "",
         "username": username,
         "error": error,
         "no_accounts": auth.NO_ACCOUNTS,
+        "load_note": auth.LOAD_NOTE,
     }, status_code=status_code)
 
 
