@@ -13,7 +13,7 @@ from . import models
 
 # ---------- giá trị hợp lệ ----------
 
-FOOD_STATUSES = ("da_an", "chua_an", "muon_an")
+FOOD_STATUSES = ("da_an", "muon_an")
 PLAN_PRIORITIES = ("low", "normal", "high")
 TX_KINDS = ("out", "in")
 TX_SOURCES = ("momo", "tien_mat", "bank")

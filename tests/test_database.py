@@ -142,6 +142,34 @@ def test_hang_cu_duoc_dien_gia_tri_mac_dinh(tmp_path, monkeypatch):
     engine.dispose()
 
 
+def test_quan_chua_an_duoc_don_sang_muon_an(tmp_path, monkeypatch):
+    """Cột "Chưa ăn" đã bỏ: hàng cũ mang trạng thái đó phải được dồn sang
+    "Muốn ăn", nếu không nó không hiện ở cột nào cả — nhìn như mất dữ liệu."""
+    engine = _engine_moi(tmp_path)
+    monkeypatch.setattr(migrations, "engine", engine)
+
+    Base.metadata.create_all(bind=engine)
+
+    with engine.begin() as conn:
+        conn.execute(text(
+            "INSERT INTO food_places (name, status) VALUES ('Quán treo', 'chua_an')"))
+        conn.execute(text(
+            "INSERT INTO food_places (name, status) VALUES ('Quán quen', 'da_an')"))
+
+    applied = migrations.run()
+
+    with engine.begin() as conn:
+        con_lai = dict(conn.execute(text("SELECT name, status FROM food_places")).all())
+
+    assert con_lai == {"Quán treo": "muon_an", "Quán quen": "da_an"}
+    assert any("chua_an" in viec for viec in applied)
+
+    # chạy lại lần nữa: không còn gì để đổi, cũng không được báo đã làm gì
+    assert not [viec for viec in migrations.run() if "chua_an" in viec]
+
+    engine.dispose()
+
+
 def test_du_lieu_song_qua_lan_khoi_dong_lai(tmp_path, monkeypatch):
     """Ghi → đóng hẳn → mở lại: dữ liệu phải còn. Kiểm tra rằng chỗ lưu là
     file thật chứ không phải RAM."""

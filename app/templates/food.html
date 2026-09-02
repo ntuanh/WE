@@ -23,7 +23,6 @@
 
             <select name="status">
                 <option value="da_an">Đã ăn</option>
-                <option value="chua_an">Chưa ăn</option>
                 <option value="muon_an">Muốn ăn</option>
             </select>
 
@@ -31,12 +30,45 @@
         </form>
     </div>
 
-    <!-- 3 CỘT -->
+    <!-- 🎡 VÒNG QUAY — bốc ngẫu nhiên một quán trong cột "Muốn ăn" -->
+    <div class="wheel-panel">
+
+        <div class="wheel-stage">
+            <div class="wheel-pointer" aria-hidden="true"></div>
+
+            <div class="wheel" id="wheel">
+                <div class="wheel-labels" id="wheel-labels"></div>
+            </div>
+
+            <button type="button" class="wheel-hub" id="wheel-spin">QUAY</button>
+        </div>
+
+        <div class="wheel-side">
+            <h3>🎡 Hôm nay ăn gì?</h3>
+
+            <p class="wheel-hint" id="wheel-hint">
+                Bấm QUAY để bốc ngẫu nhiên một quán trong “Muốn ăn”.
+            </p>
+
+            <!-- Ket qua: an di chu khong xoa han, de khoi dung lai DOM moi lan quay -->
+            <div class="wheel-result" id="wheel-result" hidden>
+                <span class="wheel-result-tag">Vòng quay chọn</span>
+                <div class="wheel-pick" id="wheel-pick"></div>
+
+                <div class="wheel-actions">
+                    <button type="button" class="wheel-verify" id="wheel-verify">✅ Verify</button>
+                    <button type="button" class="wheel-again" id="wheel-again">🎲 Again</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- 2 CỘT -->
     <div class="food-columns">
 
         {% set columns = [
             ('da_an',   '🟢 Đã ăn'),
-            ('chua_an', '🟡 Chưa ăn'),
             ('muon_an', '🔴 Muốn ăn')
         ] %}
 
@@ -54,7 +86,8 @@
                 <div class="food-card"
                      draggable="true"
                      ondragstart="drag(event)"
-                     id="food-{{ f.id }}">
+                     id="food-{{ f.id }}"
+                     data-name="{{ f.name }}">
 
                     <div class="food-photo"
                          {% if f.image %}style="background-image:url('{{ f.image }}')"{% endif %}></div>
@@ -100,37 +133,232 @@ function dragLeave(event) {
         event.currentTarget.classList.remove("drag-over");
 }
 
-function drop(event) {
-    event.preventDefault();
-    let column = event.currentTarget;
-    column.classList.remove("drag-over");
+// Doi cot cho mot the: DOM doi truoc cho muot, roi moi bao server.
+// Khong throw thi the van nam cot moi trong khi DB giu cot cu — nhin thi tuong
+// luu roi, F5 phat moi biet la khong.
+function saveStatus(card, column, previousColumn) {
+    var foodId = card.id.split("-")[1];
+    var newStatus = column.getAttribute("data-status");
 
-    let cardId = event.dataTransfer.getData("text");
-    let card = document.getElementById(cardId);
-    if (!card) return;
-
-    // nho chi cu de con duong quay ve neu server tu choi
-    let previousColumn = card.parentElement;
-    if (previousColumn === column) return;
-
-    column.appendChild(card);
-
-    let foodId = cardId.split("-")[1];
-    let newStatus = column.getAttribute("data-status");
-
-    fetch(`/food/update-status/${foodId}`, {
+    return fetch("/food/update-status/" + foodId, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ status: newStatus })
     }).then(function (res) {
-        // Khong throw thi the van nam cot moi trong khi DB giu cot cu —
-        // nhin thi tuong luu roi, F5 phat moi biet la khong.
         if (!res.ok) throw new Error(res.status);
-    }).catch(function () {
+        window.wheelRefresh();
+    }).catch(function (err) {
         previousColumn.appendChild(card);
+        window.wheelRefresh();
         alert("Chua luu duoc, thu lai nha 🥲");
+        throw err;
     });
 }
+
+function drop(event) {
+    event.preventDefault();
+    var column = event.currentTarget;
+    column.classList.remove("drag-over");
+
+    var cardId = event.dataTransfer.getData("text");
+    var card = document.getElementById(cardId);
+    if (!card) return;
+
+    // nho chi cu de con duong quay ve neu server tu choi
+    var previousColumn = card.parentElement;
+    if (previousColumn === column) return;
+
+    column.appendChild(card);
+    saveStatus(card, column, previousColumn).catch(function () {});
+}
+
+
+/* ================= VÒNG QUAY ================= */
+(function () {
+    var SPIN_MS = 4200;
+    var TURNS = 5;                       // so vong quay tron truoc khi dung lai
+    var MAX_LABELS = 16;                 // dong hon la nhoi chu thanh mot vien lem nhem
+    var EMPTY_HINT = "Cột “Muốn ăn” đang trống — thêm quán rồi quay nhé.";
+    var COLORS = [
+        "oklch(0.74 0.15 40)",
+        "oklch(0.80 0.12 75)",
+        "oklch(0.75 0.11 350)",
+        "oklch(0.74 0.13 150)",
+        "oklch(0.72 0.11 300)",
+        "oklch(0.70 0.15 25)"
+    ];
+
+    var wheel = document.getElementById("wheel");
+    var labels = document.getElementById("wheel-labels");
+    var spinBtn = document.getElementById("wheel-spin");
+    var hint = document.getElementById("wheel-hint");
+    var result = document.getElementById("wheel-result");
+    var pickBox = document.getElementById("wheel-pick");
+    var verifyBtn = document.getElementById("wheel-verify");
+    var againBtn = document.getElementById("wheel-again");
+
+    var rotation = 0;      // goc cong don, chi tang de vong quay khong giat nguoc
+    var spinning = false;
+    var picked = null;     // the dang duoc vong quay chi vao
+
+    // Danh sach doc thang tu DOM chu khong chup mot lan luc tai trang: keo tha
+    // hay Verify vua doi cot xong la vong quay biet ngay, khoi F5.
+    function pool() {
+        var column = document.querySelector(".food-column[data-status='muon_an']");
+        return column ? Array.prototype.slice.call(column.querySelectorAll(".food-card")) : [];
+    }
+
+    function nameOf(card) {
+        return card.getAttribute("data-name") || card.querySelector(".food-info b").textContent.trim();
+    }
+
+    function colorAt(i, total) {
+        var color = COLORS[i % COLORS.length];
+
+        // Vong tron: mieng cuoi cham mieng dau, trung mau thi mat duong ranh.
+        if (i === total - 1 && total > 1 && color === COLORS[0]) color = COLORS[1];
+
+        return color;
+    }
+
+    function render() {
+        var items = pool();
+        var n = items.length;
+
+        labels.innerHTML = "";
+        spinBtn.disabled = spinning || n === 0;
+
+        if (n === 0) {
+            wheel.style.background = "oklch(0.93 0.02 60)";
+            if (!spinning) showHint(EMPTY_HINT);
+            return;
+        }
+
+        var seg = 360 / n;
+        var stops = [];
+
+        for (var i = 0; i < n; i++) {
+            stops.push(colorAt(i, n) + " " + (i * seg).toFixed(3) + "deg " +
+                       ((i + 1) * seg).toFixed(3) + "deg");
+
+            if (n > MAX_LABELS) continue;
+
+            var mid = i * seg + seg / 2;
+            var label = document.createElement("div");
+
+            if (n === 1) {
+                // Mot mieng an ca vong tron: chu chay doc theo ban kinh se do
+                // dung xuong duoi, nen cho no nam ngang o phia tren nut QUAY.
+                label.className = "wheel-label solo";
+            } else {
+                // Nua trai cua vong quay bi lat nguoc: xoay chu them 180 do cho doc duoc.
+                label.className = mid > 180 ? "wheel-label flip" : "wheel-label";
+                label.style.transform = "rotate(" + (mid - 90) + "deg)";
+            }
+
+            var span = document.createElement("span");
+            span.textContent = nameOf(items[i]);
+
+            label.appendChild(span);
+            labels.appendChild(label);
+        }
+
+        wheel.style.background = "conic-gradient(from 0deg, " + stops.join(", ") + ")";
+    }
+
+    function showHint(text) {
+        hint.textContent = text;
+        hint.hidden = false;
+        result.hidden = true;
+    }
+
+    function spin() {
+        if (spinning) return;
+
+        var items = pool();
+
+        if (!items.length) {
+            showHint(EMPTY_HINT);
+            return;
+        }
+
+        render();
+
+        var n = items.length;
+        var seg = 360 / n;
+        var index = Math.floor(Math.random() * n);
+
+        picked = items[index];
+
+        // Kim chi thang len tren, nen mieng thu index nam duoi kim khi tam cua
+        // no ve dung dinh. Cong don TURNS vong cho ra dang quay that.
+        var wanted = (360 - (index * seg + seg / 2)) % 360;
+        rotation += TURNS * 360 + (((wanted - (rotation % 360)) + 360) % 360);
+
+        spinning = true;
+        spinBtn.disabled = true;
+        result.hidden = true;
+        hint.hidden = false;
+        hint.textContent = "Đang quay… 🥁";
+
+        wheel.style.transition = "transform " + SPIN_MS + "ms cubic-bezier(0.16, 1, 0.3, 1)";
+        wheel.style.transform = "rotate(" + rotation + "deg)";
+
+        window.setTimeout(function () {
+            spinning = false;
+            spinBtn.disabled = false;
+
+            // The co the vua bi keo sang cot khac hoac xoa mat trong luc quay —
+            // quay lai con hon chi vao mot quan khong con o "Muon an".
+            if (!picked || !picked.isConnected ||
+                picked.parentElement.getAttribute("data-status") !== "muon_an") {
+                picked = null;
+                render();
+                showHint("Quán vừa bốc không còn trong “Muốn ăn” nữa — quay lại nhé.");
+                return;
+            }
+
+            pickBox.textContent = nameOf(picked);
+            hint.hidden = true;
+            result.hidden = false;
+        }, SPIN_MS);
+    }
+
+    // Verify = chot quan nay, cho no sang "Da an" (dung chung duong luu voi keo tha).
+    function verify() {
+        if (spinning || !picked) return;
+
+        var card = picked;
+        var target = document.querySelector(".food-column[data-status='da_an']");
+        var previousColumn = card.parentElement;
+
+        if (!target || previousColumn === target) return;
+
+        verifyBtn.disabled = true;
+        againBtn.disabled = true;
+        target.appendChild(card);
+
+        saveStatus(card, target, previousColumn).then(function () {
+            picked = null;
+            showHint("Ngon miệng nha 🍜 “" + nameOf(card) + "” đã sang “Đã ăn”.");
+        }, function () {
+            // saveStatus da tra the ve cho cu va bao loi roi, chi can mo lai nut
+            result.hidden = false;
+        }).then(function () {
+            verifyBtn.disabled = false;
+            againBtn.disabled = false;
+        });
+    }
+
+    // Cho phan con lai cua trang goi khi danh sach "Muon an" doi.
+    window.wheelRefresh = render;
+
+    spinBtn.addEventListener("click", spin);
+    againBtn.addEventListener("click", spin);
+    verifyBtn.addEventListener("click", verify);
+
+    render();
+})();
 </script>
 
 {% endblock %}

@@ -44,6 +44,39 @@ def test_khong_xoa_duoc_bang_get(logged_in, db):
     assert len(crud.get_foods(db)) == 1
 
 
+def test_khong_con_cot_chua_an(logged_in):
+    """Bảng đồ ăn giờ chỉ còn hai cột."""
+    trang = logged_in.get("/food").text
+
+    assert 'data-status="chua_an"' not in trang
+    assert 'data-status="da_an"' in trang
+    assert 'data-status="muon_an"' in trang
+
+
+def test_trang_thai_bo_di_quay_ve_muon_an(logged_in, db):
+    """Form cũ (hoặc ai đó gõ tay) gửi lên "chua_an" thì không được lọt vào DB."""
+    logged_in.post("/food/add", data={
+        "name": "Quán", "address": "Đâu đó", "note": "",
+        "image": "", "rating": "0", "status": "chua_an",
+    }, follow_redirects=False)
+
+    assert crud.get_foods(db)[0].status == "muon_an"
+
+
+def test_vong_quay_doc_ten_quan_tu_the(logged_in, db):
+    """Vòng quay lấy danh sách thẳng từ các thẻ trong cột "Muốn ăn", nên tên
+    quán phải nằm sẵn trên thẻ ở dạng máy đọc được."""
+    quan = crud.create_food(db, "Cơm tấm Ba Ghiền", "Phan Xích Long", "", "muon_an")
+
+    trang = logged_in.get("/food").text
+
+    assert 'id="wheel-spin"' in trang
+    assert 'id="wheel-verify"' in trang
+    assert 'id="wheel-again"' in trang
+    assert f'id="food-{quan.id}"' in trang
+    assert 'data-name="Cơm tấm Ba Ghiền"' in trang
+
+
 def test_sua_quan_khong_co_that_tra_404(logged_in):
     assert logged_in.get("/food/edit/9999").status_code == 404
 

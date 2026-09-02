@@ -63,6 +63,32 @@ def _add_column(conn, table, column):
         )
 
 
+# Cột "Chưa ăn" đã bị bỏ khỏi bảng đồ ăn. Hàng cũ còn mang trạng thái đó sẽ
+# không hiện ra ở cột nào cả — nhìn như bị mất — nên dồn về "Muốn ăn", nghĩa
+# gần nó nhất trong hai cột còn lại.
+_RETIRED_FOOD_STATUS = ("chua_an", "muon_an")
+
+
+def _retire_food_status(existing_tables) -> list:
+    """Đổi trạng thái đã bỏ sang trạng thái thay thế. Chạy lại nhiều lần vô hại."""
+    old, new = _RETIRED_FOOD_STATUS
+
+    if "food_places" not in existing_tables:
+        return []
+
+    try:
+        with engine.begin() as conn:
+            moved = conn.execute(
+                text("UPDATE food_places SET status = :new WHERE status = :old"),
+                {"new": new, "old": old},
+            ).rowcount
+    except Exception as exc:  # dữ liệu lệch không được làm chết app
+        log(f"[migrations] bo qua doi trang thai {old}: {exc!r}")
+        return []
+
+    return [f"food_places: {moved} quan {old} -> {new}"] if moved else []
+
+
 def run() -> list:
     """Đồng bộ schema thật với models.py. Trả về danh sách việc đã làm."""
     inspector = inspect(engine)
@@ -102,5 +128,7 @@ def run() -> list:
                 applied.append(f"index {index.name}")
             except Exception as exc:  # index thiếu không làm chết app
                 log(f"[migrations] bo qua index {index.name}: {exc!r}")
+
+    applied += _retire_food_status(existing_tables)
 
     return applied
