@@ -45,6 +45,21 @@ class ScheduleEvent(Base):
     id = Column(Integer, primary_key=True, index=True)
     owner = Column(String, index=True)       # tên đăng nhập của chủ lịch
     date = Column(String, index=True)        # "YYYY-MM-DD"
-    start = Column(String, default="")       # "HH:MM", để trống là cả ngày
+    start = Column(String, default="")       # "HH:MM", để trống là việc cả ngày
+    end = Column(String, default="")         # "HH:MM", rỗng thì coi như dài 1 tiếng
     title = Column(String)
     note = Column(String, default="")
+
+
+class SpecialDay(Base):
+    """Một ngày được đánh dấu ♥ — ngày của cả hai, không của riêng ai.
+
+    Vì thế bảng này không có cột `owner`: đánh dấu một lần là hiện ở cả hai
+    thời gian biểu, và trang lịch vẽ thêm phần nối hai bên lại với nhau.
+    """
+
+    __tablename__ = "special_days"
+
+    id = Column(Integer, primary_key=True, index=True)
+    date = Column(String, index=True)        # "YYYY-MM-DD"
+    title = Column(String, default="")

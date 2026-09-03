@@ -5,7 +5,7 @@ còn việc *làm sạch và kiểm tra* là ở đây — nhờ vậy không c�
 được, kể cả khi sau này thêm route mới.
 """
 
-from datetime import date as date_cls, time as time_cls
+from datetime import date as date_cls, time as time_cls, timedelta
 
 from sqlalchemy.orm import Session
 
@@ -211,6 +211,11 @@ def delete_plan(db: Session, id: int) -> bool:
 
 # ---------- LỊCH ----------
 
+# Việc không ghi giờ kết thúc thì coi như dài chừng này — đủ để thành một ô
+# nhìn thấy được trên thời gian biểu, thay vì một vạch mỏng dính.
+DEFAULT_MINUTES = 60
+
+
 def people() -> list:
     """Tên hai chủ lịch, lấy thẳng từ danh sách tài khoản.
 
@@ -234,14 +239,63 @@ def valid_time(value) -> str:
         return ""
 
 
-def get_events(db: Session, month: str, owner: str = ""):
-    """Lịch của một tháng YYYY-MM, sớm nhất lên trước.
+def minutes(hhmm: str) -> int:
+    """"08:30" -> 510. Chuỗi rỗng hoặc hỏng -> 0."""
+    parts = clean(hhmm, 5).split(":")
 
-    Ngày lưu dạng chuỗi nên lọc bằng LIKE — chạy giống nhau trên SQLite lẫn
-    Postgres. Việc không có giờ ("") xếp lên đầu ngày, coi như việc cả ngày.
+    try:
+        return int(parts[0]) * 60 + int(parts[1])
+    except (IndexError, ValueError):
+        return 0
+
+
+def hhmm(total: int) -> str:
+    """510 -> "08:30". Kẹp trong một ngày để không đẻ ra "25:10"."""
+    total = max(0, min(int(total), 24 * 60 - 1))
+    return f"{total // 60:02d}:{total % 60:02d}"
+
+
+def _span(start: str, end: str) -> tuple:
+    """Cặp (giờ bắt đầu, giờ kết thúc) đã hợp lệ hoá.
+
+    Kết thúc trước hoặc bằng bắt đầu là gõ nhầm — đẩy thành một tiếng sau, chứ
+    để nguyên thì ô việc có chiều cao âm và thời gian biểu vỡ hình.
+    """
+    start = valid_time(start)
+
+    if not start:
+        return "", ""          # việc cả ngày: không nằm trên trục giờ
+
+    end = valid_time(end)
+
+    if not end or minutes(end) <= minutes(start):
+        end = hhmm(minutes(start) + DEFAULT_MINUTES)
+
+    return start, end
+
+
+def monday_of(value) -> str:
+    """Thứ 2 của tuần chứa ngày này, dạng YYYY-MM-DD."""
+    day = date_cls.fromisoformat(valid_date(value))
+    return (day - timedelta(days=day.weekday())).isoformat()
+
+
+def week_days(monday: str) -> list:
+    """Bảy ngày của tuần bắt đầu từ `monday`."""
+    first = date_cls.fromisoformat(monday_of(monday))
+    return [(first + timedelta(days=i)).isoformat() for i in range(7)]
+
+
+def get_events(db: Session, start_date: str, end_date: str, owner: str = ""):
+    """Việc trong khoảng ngày [start_date, end_date], sớm nhất lên trước.
+
+    Ngày lưu dạng chuỗi YYYY-MM-DD nên so sánh chuỗi cũng chính là so sánh ngày
+    — chạy giống nhau trên SQLite lẫn Postgres. Việc không có giờ ("") xếp lên
+    đầu ngày, coi như việc cả ngày.
     """
     query = (db.query(models.ScheduleEvent)
-               .filter(models.ScheduleEvent.date.like(f"{valid_month(month)}-%")))
+               .filter(models.ScheduleEvent.date >= valid_date(start_date),
+                       models.ScheduleEvent.date <= valid_date(end_date)))
 
     if owner:
         query = query.filter(models.ScheduleEvent.owner == owner)
@@ -251,12 +305,17 @@ def get_events(db: Session, month: str, owner: str = ""):
                           models.ScheduleEvent.id).all()
 
 
+def get_week_events(db: Session, monday: str, owner: str = ""):
+    days = week_days(monday)
+    return get_events(db, days[0], days[-1], owner)
+
+
 def get_event(db: Session, id: int):
     return db.get(models.ScheduleEvent, id)
 
 
-def create_event(db: Session, owner, date, title, start="", note=""):
-    """Thêm một mục vào lịch. Trả None nếu chủ lịch không phải người có tài khoản.
+def create_event(db: Session, owner, date, title, start="", end="", note=""):
+    """Thêm một việc. Trả None nếu chủ lịch không phải người có tài khoản.
 
     Ở đây *không* dùng `_one_of` để đẩy về giá trị mặc định như chỗ khác: gõ sai
     tên mà lẳng lặng nhét vào lịch người kia thì tai hại hơn là báo lỗi.
@@ -267,10 +326,13 @@ def create_event(db: Session, owner, date, title, start="", note=""):
     if owner not in people() or not title:
         return None
 
+    start, end = _span(start, end)
+
     event = models.ScheduleEvent(
         owner=owner,
         date=valid_date(date),
-        start=valid_time(start),
+        start=start,
+        end=end,
         title=title,
         note=clean(note),
     )
@@ -280,8 +342,8 @@ def create_event(db: Session, owner, date, title, start="", note=""):
     return event
 
 
-def update_event(db: Session, id: int, title, start, note):
-    """Sửa nội dung một mục — không cho đổi chủ lịch hay ngày ở đây."""
+def update_event(db: Session, id: int, title, start, end, note):
+    """Sửa nội dung một việc — không cho đổi chủ lịch hay ngày ở đây."""
     item = get_event(db, id)
     if not item:
         return None
@@ -291,7 +353,7 @@ def update_event(db: Session, id: int, title, start, note):
         return None
 
     item.title = title
-    item.start = valid_time(start)
+    item.start, item.end = _span(start, end)
     item.note = clean(note)
 
     db.commit()
@@ -300,6 +362,51 @@ def update_event(db: Session, id: int, title, start, note):
 
 def delete_event(db: Session, id: int) -> bool:
     return _delete(db, models.ScheduleEvent, id)
+
+
+# ---------- NGÀY ĐẶC BIỆT ----------
+
+def get_special_days(db: Session, start_date: str, end_date: str):
+    """Các ngày ♥ trong khoảng, sớm nhất trước."""
+    return (db.query(models.SpecialDay)
+              .filter(models.SpecialDay.date >= valid_date(start_date),
+                      models.SpecialDay.date <= valid_date(end_date))
+              .order_by(models.SpecialDay.date)
+              .all())
+
+
+def get_special_day(db: Session, date: str):
+    return (db.query(models.SpecialDay)
+              .filter(models.SpecialDay.date == valid_date(date))
+              .first())
+
+
+def toggle_special_day(db: Session, date: str, title=""):
+    """Bật/tắt dấu ♥ cho một ngày. Trả bản ghi mới, hoặc None khi vừa tắt.
+
+    Đánh dấu lại một ngày đã ♥ mà có gõ tên mới thì hiểu là *đổi tên*, không
+    phải tắt đi — bấm nhầm nút xoá mất tên vừa gõ thì ức chế.
+    """
+    date = valid_date(date)
+    title = clean(title, 200)
+
+    item = get_special_day(db, date)
+
+    if item:
+        if title and title != item.title:
+            item.title = title
+            db.commit()
+            return item
+
+        db.delete(item)
+        db.commit()
+        return None
+
+    item = models.SpecialDay(date=date, title=title)
+    db.add(item)
+    db.commit()
+    db.refresh(item)
+    return item
 
 
 # ---------- dùng chung ----------

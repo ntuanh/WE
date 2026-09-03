@@ -7,7 +7,7 @@ A lightweight, fast, and responsive web application built with Python and FastAP
 * **Food Board:** A drag-and-drop kanban across three columns (Đã ăn / Chưa ăn / Muốn ăn), with photo thumbnails, a 0–5 star rating, and a one-tap Google Maps link per place.
 * **Study Management:** Keep track of your study spots and edit them in place.
 * **Daily Planning:** A todo list with priority badges, deadlines, and tick-to-complete.
-* **Shared Calendar:** Two month calendars side by side, one per account, in matching tones. Click any day to expand it in place and read, add, edit, or delete what is on it — so both of you can see the other's week at a glance.
+* **Shared Timetable:** A weekly hour-by-hour timetable per account, plus ♥ special days that put both people's timelines side by side and draw the connection between them — the windows where you are *both* free, and the hours you are both booked.
 * **Login Gate:** Every page sits behind a username/password form — two accounts, one of them admin. Passwords are PBKDF2 hashes, the session is an HMAC-signed cookie, and repeated wrong guesses lock the account out for a while.
 * **Glass Aesthetic:** Frosted-glass panels over a full-bleed video background, with a warm oklch palette and responsive breakpoints down to mobile.
 * **Interactive UI:** Background videos for an immersive experience, and an auto-highlighting nav bar.
@@ -161,7 +161,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-193 tests, no network and no touching `we.db` — `tests/conftest.py` points the
+218 tests, no network and no touching `we.db` — `tests/conftest.py` points the
 app at an in-memory SQLite before importing it, and swaps in throwaway accounts
 so the real password hashes are never needed.
 
@@ -169,31 +169,56 @@ so the real password hashes are never needed.
 | --- | --- |
 | `tests/test_auth.py` | password hashing, login, brute-force lockout, session cookie forgery/expiry, the login gate on every page |
 | `tests/test_database.py` | the "new column, old database" case, repeat-safe migrations, data surviving a restart, database selection |
-| `tests/test_crud.py` | input cleaning and validation, calendar ownership rules |
+| `tests/test_crud.py` | input cleaning and validation, time parsing, week maths, calendar ownership rules |
 | `tests/test_routes.py` | each page and form end-to-end over HTTP |
 
-## 🗓 Shared calendar
+## 🗓 Shared timetable
 
-`/schedule` puts one month calendar per account side by side — the accounts come
-from `auth.USERS`, so nobody's name is hard-coded and the page follows whatever
-two logins exist.
+`/schedule` gives each account its own week timetable — hours down the side,
+Mon–Sun across, entries drawn as blocks against the clock. The accounts come from
+`auth.USERS`, so nobody's name is hard-coded and the page follows whatever two
+logins exist.
 
-A day cell shows a dot per entry (three, then `+n`); clicking it expands a panel
-**inside that same week row**, so the grid never jumps around underneath you.
-The panel holds that day's entries — each one expandable into an edit form — plus
-a form to add another. Only one day is open per calendar, but the two calendars
-open independently, which is the point: put the same date up on both and you can
-see where the two weeks collide.
+The hour window is not fixed at 00:00–24:00, which would leave most of the grid
+empty. It defaults to 07:00–22:00 and stretches only as far as the week's earliest
+and latest entry actually reach.
 
-The expand state is real HTML, not just JavaScript. Every day's panel is rendered
-server-side and hidden, the JS only flips `hidden`, and after a submit the server
-redirects back with `?open=<account>:<date>` so the day you were working on is
-still open when the page comes back.
+Entries that overlap are split into lanes and drawn side by side. Without that the
+later one renders on top of the earlier and hides it completely, which looks exactly
+like the entry was never saved.
 
-Entries are stored per account with an optional `HH:MM` — leaving the time empty
-means an all-day entry, and those sort to the top of the day. An entry can only be
-filed under an account that actually exists: a bad `owner` is rejected outright
-rather than quietly landing on the other person's calendar.
+Clicking a day header — or any block in it — expands that day's panel below the
+grid to read, add, edit or delete. The panel is rendered server-side and hidden,
+the script only flips `hidden`, and a submit redirects back with
+`?open=<account>:<date>` so the day you were working on is still open when the
+page comes back. Clicking a block also opens that entry's edit form directly.
+
+### ♥ Special days and the connection between them
+
+Any day can be marked ♥ with a reason ("Kỷ niệm 2 năm"). A special day is shared,
+not per-person — `special_days` has no `owner` column, so marking it from either
+timetable marks it for both.
+
+Special days get pinned above the week as **two timelines on one hour axis**, one
+person per side, with the connection drawn down the middle:
+
+* **♥ rảnh cùng nhau** — a solid band wherever *both* calendars are empty, so the
+  windows you could actually spend together are the most visible thing on the page.
+  Gaps shorter than `FREE_MINUTES` (45) are dropped: a ten-minute crack between two
+  classes is not a window.
+* **✕ cả hai đều bận** — a hatched band where both are booked.
+
+Both are computed as interval intersections: merge each person's entries into busy
+spans, take the complement for free spans, then intersect the two sides. A summary
+line adds up each ("Rảnh cùng nhau 9 tiếng"), and the free windows repeat as chips
+under the timelines.
+
+Entries store an optional `HH:MM` start and end. Leaving the start empty makes it
+an all-day entry, shown as a chip in the day header rather than a block on the
+axis. An end at or before the start is a typo, so it is pushed to start + 1 hour —
+left alone it would render a block with negative height and break the grid. An
+entry can only be filed under an account that exists: a bad `owner` is rejected
+outright rather than quietly landing on the other person's timetable.
 
 ## 🔐 Accounts & passwords
 
