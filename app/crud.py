@@ -5,23 +5,19 @@ còn việc *làm sạch và kiểm tra* là ở đây — nhờ vậy không c�
 được, kể cả khi sau này thêm route mới.
 """
 
-from datetime import date as date_cls
+from datetime import date as date_cls, time as time_cls
 
 from sqlalchemy.orm import Session
 
-from . import models
+from . import auth, models
 
 # ---------- giá trị hợp lệ ----------
 
 FOOD_STATUSES = ("da_an", "muon_an")
 PLAN_PRIORITIES = ("low", "normal", "high")
-TX_KINDS = ("out", "in")
-TX_SOURCES = ("momo", "tien_mat", "bank")
-TX_CATEGORIES = ("an", "di_lai", "mua_sam", "hoa_don", "giai_tri", "khac")
 
 MAX_TEXT = 500          # đủ dài cho ghi chú, đủ ngắn để không ai dán cả cuốn sách
 MAX_URL = 2000
-MAX_AMOUNT = 10 ** 15   # chặn số vô lý làm tràn cột BigInteger
 
 
 def clean(value, limit: int = MAX_TEXT) -> str:
@@ -213,127 +209,97 @@ def delete_plan(db: Session, id: int) -> bool:
     return _delete(db, models.Plan, id)
 
 
-# ---------- MONEY ----------
+# ---------- LỊCH ----------
 
-def get_transactions(db: Session, month: str):
-    """Giao dịch của một tháng YYYY-MM, mới nhất lên trên.
+def people() -> list:
+    """Tên hai chủ lịch, lấy thẳng từ danh sách tài khoản.
 
-    Ngày lưu dạng chuỗi nên lọc bằng LIKE — chạy giống nhau trên SQLite lẫn Postgres.
+    Đọc lúc gọi chứ không phải lúc import: test thay `auth.USERS` bằng tài khoản
+    giả, mà tên viết cứng ở đây thì mọi thứ lệch nhau ngay.
     """
-    return (db.query(models.Transaction)
-              .filter(models.Transaction.date.like(f"{valid_month(month)}-%"))
-              .order_by(models.Transaction.date.desc(), models.Transaction.id.desc())
-              .all())
+    return sorted(auth.USERS)
 
 
-def get_transaction(db: Session, id: int):
-    return db.get(models.Transaction, id)
+def valid_time(value) -> str:
+    """Chuẩn hoá về "HH:MM". Không đọc được thì trả rỗng = việc cả ngày.
+
+    Không dùng thẳng `time.fromisoformat`: nó đòi đủ hai chữ số, mà trình duyệt
+    cũ không có ô chọn giờ thì cho gõ tay — "8:5" cũng phải hiểu là 08:05.
+    """
+    parts = clean(value, 8).split(":")
+
+    try:
+        return time_cls(int(parts[0]), int(parts[1])).strftime("%H:%M")
+    except (IndexError, ValueError):
+        return ""
 
 
-def create_transaction(db: Session, amount, kind, category, note, date,
-                       source="tien_mat", ref=""):
-    tx = models.Transaction(
-        amount=_clamp_int(amount, 0, MAX_AMOUNT),
-        kind=_one_of(kind, TX_KINDS, "out"),
-        category=_one_of(category, TX_CATEGORIES, "khac"),
-        note=clean(note),
+def get_events(db: Session, month: str, owner: str = ""):
+    """Lịch của một tháng YYYY-MM, sớm nhất lên trước.
+
+    Ngày lưu dạng chuỗi nên lọc bằng LIKE — chạy giống nhau trên SQLite lẫn
+    Postgres. Việc không có giờ ("") xếp lên đầu ngày, coi như việc cả ngày.
+    """
+    query = (db.query(models.ScheduleEvent)
+               .filter(models.ScheduleEvent.date.like(f"{valid_month(month)}-%")))
+
+    if owner:
+        query = query.filter(models.ScheduleEvent.owner == owner)
+
+    return query.order_by(models.ScheduleEvent.date,
+                          models.ScheduleEvent.start,
+                          models.ScheduleEvent.id).all()
+
+
+def get_event(db: Session, id: int):
+    return db.get(models.ScheduleEvent, id)
+
+
+def create_event(db: Session, owner, date, title, start="", note=""):
+    """Thêm một mục vào lịch. Trả None nếu chủ lịch không phải người có tài khoản.
+
+    Ở đây *không* dùng `_one_of` để đẩy về giá trị mặc định như chỗ khác: gõ sai
+    tên mà lẳng lặng nhét vào lịch người kia thì tai hại hơn là báo lỗi.
+    """
+    owner = clean(owner, 50).lower()
+    title = clean(title, 200)
+
+    if owner not in people() or not title:
+        return None
+
+    event = models.ScheduleEvent(
+        owner=owner,
         date=valid_date(date),
-        source=_one_of(source, TX_SOURCES, "tien_mat"),
-        ref=clean(ref, 100),
+        start=valid_time(start),
+        title=title,
+        note=clean(note),
     )
-    db.add(tx)
+    db.add(event)
     db.commit()
-    db.refresh(tx)
-    return tx
+    db.refresh(event)
+    return event
 
 
-def delete_transaction(db: Session, id: int) -> bool:
-    return _delete(db, models.Transaction, id)
+def update_event(db: Session, id: int, title, start, note):
+    """Sửa nội dung một mục — không cho đổi chủ lịch hay ngày ở đây."""
+    item = get_event(db, id)
+    if not item:
+        return None
 
+    title = clean(title, 200)
+    if not title:
+        return None
 
-def import_transactions(db: Session, rows):
-    """Ghi các dòng đọc từ sao kê MoMo. Trả (số thêm mới, số bỏ qua vì trùng).
-
-    Trùng = cùng mã giao dịch MoMo, hoặc cùng ngày + số tiền + mô tả khi sao kê
-    không có mã — nhờ vậy import lại đúng file cũ không nhân đôi chi tiêu.
-
-    Đọc sẵn khoá của các giao dịch đã có thành một tập hợp rồi mới duyệt, thay
-    vì bắn một câu SELECT cho mỗi dòng: file sao kê vài trăm dòng là thấy khác.
-    """
-    # Làm sạch trước, so trùng sau. Nếu so bằng dữ liệu thô rồi mới chuẩn hoá
-    # lúc ghi, khoá đem đi so sẽ khác giá trị nằm trong DB — lần import sau
-    # không nhận ra dòng cũ và ghi lại lần nữa.
-    sach = [{
-        "amount": _clamp_int(r.get("amount"), 0, MAX_AMOUNT),
-        "kind": _one_of(r.get("kind"), TX_KINDS, "out"),
-        "category": _one_of(r.get("category"), TX_CATEGORIES, "khac"),
-        "note": clean(r.get("note")),
-        "date": valid_date(r.get("date")),
-        "source": _one_of(r.get("source"), TX_SOURCES, "momo"),
-        "ref": clean(r.get("ref"), 100),
-    } for r in (rows or [])]
-
-    if not sach:
-        return 0, 0
-
-    months = {r["date"][:7] for r in sach}
-
-    existing = (db.query(models.Transaction)
-                  .filter(models.Transaction.date >= min(months) + "-01",
-                          models.Transaction.date <= max(months) + "-31")
-                  .all())
-
-    seen_refs = {t.ref for t in existing if t.ref}
-    seen_rows = {(t.date, t.amount, t.note) for t in existing}
-
-    added = skipped = 0
-
-    for row in sach:
-        ref = row["ref"]
-        key = (row["date"], row["amount"], row["note"])
-
-        # trùng với DB, hoặc trùng với một dòng vừa xử lý trong chính file này
-        if (ref and ref in seen_refs) or (not ref and key in seen_rows):
-            skipped += 1
-            continue
-
-        db.add(models.Transaction(**row))
-
-        if ref:
-            seen_refs.add(ref)
-        seen_rows.add(key)
-        added += 1
-
-    db.commit()
-    return added, skipped
-
-
-def get_budget(db: Session, month: str):
-    return (db.query(models.Budget)
-              .filter(models.Budget.month == valid_month(month))
-              .first())
-
-
-def set_budget(db: Session, month: str, amount):
-    month = valid_month(month)
-    amount = _clamp_int(amount, 0, MAX_AMOUNT)
-
-    item = get_budget(db, month)
-    if item:
-        item.amount = amount
-    else:
-        item = models.Budget(month=month, amount=amount)
-        db.add(item)
+    item.title = title
+    item.start = valid_time(start)
+    item.note = clean(note)
 
     db.commit()
     return item
 
 
-def get_months(db: Session):
-    """Các tháng đã có giao dịch, mới nhất trước — để đổ vào ô chọn tháng."""
-    rows = db.query(models.Transaction.date).distinct().all()
-    months = {r[0][:7] for r in rows if r[0] and len(r[0]) >= 7}
-    return sorted(months, reverse=True)
+def delete_event(db: Session, id: int) -> bool:
+    return _delete(db, models.ScheduleEvent, id)
 
 
 # ---------- dùng chung ----------

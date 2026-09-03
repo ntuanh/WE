@@ -5,6 +5,7 @@ from datetime import date
 import pytest
 
 from app import crud
+from tests.conftest import ADMIN, MEMBER
 
 
 # ---------- hàm làm sạch dùng chung ----------
@@ -145,115 +146,96 @@ def test_sua_ke_hoach(db):
            ("Mới", "high", "2025-12-25")
 
 
-# ---------- MONEY ----------
+# ---------- LỊCH ----------
 
-def test_chi_lay_giao_dich_dung_thang(db):
-    crud.create_transaction(db, 50_000, "out", "an", "tháng 3", "2025-03-14")
-    crud.create_transaction(db, 60_000, "out", "an", "tháng 4", "2025-04-01")
+def test_hai_chu_lich_lay_tu_danh_sach_tai_khoan(db):
+    """Tên hai cuốn lịch không viết cứng ở đâu cả — có tài khoản nào, lịch nấy."""
+    assert crud.people() == sorted([ADMIN, MEMBER])
 
-    thang_ba = crud.get_transactions(db, "2025-03")
+
+@pytest.mark.parametrize("vao, ra", [
+    ("08:30", "08:30"),
+    ("8:5", "08:05"),
+    ("08:30:00", "08:30"),
+    ("", ""),
+    ("linh tinh", ""),
+    ("25:00", ""),
+    (None, ""),
+])
+def test_valid_time(vao, ra):
+    assert crud.valid_time(vao) == ra
+
+
+def test_chi_lay_lich_dung_thang(db):
+    crud.create_event(db, MEMBER, "2025-03-14", "Hẹn hò")
+    crud.create_event(db, MEMBER, "2025-04-01", "Tháng sau")
+
+    thang_ba = crud.get_events(db, "2025-03")
 
     assert len(thang_ba) == 1
-    assert thang_ba[0].note == "tháng 3"
+    assert thang_ba[0].title == "Hẹn hò"
 
 
-def test_so_tien_am_bi_kep_ve_0(db):
-    """Cột amount luôn là số dương, dấu nằm ở `kind`."""
-    assert crud.create_transaction(db, -50_000, "out", "an", "", "2025-03-14").amount == 0
+def test_lich_xep_theo_ngay_roi_theo_gio(db):
+    crud.create_event(db, MEMBER, "2025-03-15", "Trưa", "12:00")
+    crud.create_event(db, MEMBER, "2025-03-14", "Chiều", "17:00")
+    crud.create_event(db, MEMBER, "2025-03-14", "Sáng", "07:00")
+    crud.create_event(db, MEMBER, "2025-03-14", "Cả ngày")
+
+    assert [e.title for e in crud.get_events(db, "2025-03")] == \
+           ["Cả ngày", "Sáng", "Chiều", "Trưa"]
 
 
-def test_hang_muc_la_thi_ve_khac(db):
-    tx = crud.create_transaction(db, 1000, "out", "hang-muc-bia", "", "2025-03-14")
-    assert tx.category == "khac"
+def test_loc_theo_chu_lich(db):
+    crud.create_event(db, MEMBER, "2025-03-14", "Của mình")
+    crud.create_event(db, ADMIN, "2025-03-14", "Của người kia")
+
+    cua_toi = crud.get_events(db, "2025-03", owner=MEMBER)
+
+    assert [e.title for e in cua_toi] == ["Của mình"]
 
 
-def test_dat_han_muc_va_sua_lai(db):
-    crud.set_budget(db, "2025-03", 3_000_000)
-    crud.set_budget(db, "2025-03", 4_000_000)      # sửa, không tạo thêm dòng mới
-
-    assert crud.get_budget(db, "2025-03").amount == 4_000_000
-
-
-def test_danh_sach_thang_moi_nhat_truoc(db):
-    for ngay in ("2025-01-05", "2025-03-14", "2025-02-20", "2025-03-30"):
-        crud.create_transaction(db, 1000, "out", "an", "", ngay)
-
-    assert crud.get_months(db) == ["2025-03", "2025-02", "2025-01"]
+def test_khong_them_duoc_vao_lich_nguoi_la(db):
+    """Gõ sai tên mà lẳng lặng nhét sang lịch người kia thì tai hại hơn là báo lỗi."""
+    assert crud.create_event(db, "nguoi-la", "2025-03-14", "Việc") is None
+    assert crud.get_events(db, "2025-03") == []
 
 
-# ---------- import sao kê ----------
-
-def _dong(ref="", ngay="2025-03-14", tien=50_000, ghi_chu="Highlands"):
-    return {"amount": tien, "kind": "out", "category": "an", "note": ghi_chu,
-            "date": ngay, "source": "momo", "ref": ref}
+def test_khong_them_duoc_muc_khong_co_ten(db):
+    assert crud.create_event(db, MEMBER, "2025-03-14", "   ") is None
+    assert crud.get_events(db, "2025-03") == []
 
 
-def test_import_lan_dau_ghi_het(db):
-    them, bo_qua = crud.import_transactions(db, [_dong("GD1"), _dong("GD2")])
+def test_ngay_hong_thi_ve_hom_nay(db):
+    from datetime import date as date_cls
 
-    assert (them, bo_qua) == (2, 0)
+    muc = crud.create_event(db, MEMBER, "linh tinh", "Việc")
 
-
-def test_import_lai_dung_file_cu_khong_nhan_doi(db):
-    rows = [_dong("GD1"), _dong("GD2")]
-
-    crud.import_transactions(db, rows)
-    them, bo_qua = crud.import_transactions(db, rows)
-
-    assert (them, bo_qua) == (0, 2)
-    assert len(crud.get_transactions(db, "2025-03")) == 2
+    assert muc.date == date_cls.today().isoformat()
 
 
-def test_khong_co_ma_giao_dich_thi_so_theo_ngay_tien_ghi_chu(db):
-    rows = [_dong(ref="")]
+def test_sua_mot_muc_trong_lich(db):
+    muc = crud.create_event(db, MEMBER, "2025-03-14", "Cũ", "08:00", "ghi chú")
 
-    crud.import_transactions(db, rows)
-    them, bo_qua = crud.import_transactions(db, rows)
+    crud.update_event(db, muc.id, "Mới", "9:30", "khác")
 
-    assert (them, bo_qua) == (0, 1)
-
-
-def test_hai_giao_dich_giong_het_trong_cung_file_van_giu_ca_hai_neu_khac_ma(db):
-    """Đi ăn hai lần cùng ngày cùng giá — có mã GD thì không được gộp."""
-    them, _ = crud.import_transactions(db, [_dong("GD1"), _dong("GD2")])
-
-    assert them == 2
+    muc = crud.get_event(db, muc.id)
+    assert (muc.title, muc.start, muc.note) == ("Mới", "09:30", "khác")
 
 
-def test_dong_trung_trong_chinh_mot_file_bi_bo_qua(db):
-    """File sao kê thỉnh thoảng lặp dòng; không có mã thì coi như một."""
-    them, bo_qua = crud.import_transactions(db, [_dong(ref=""), _dong(ref="")])
+def test_sua_thanh_ten_rong_thi_khong_luu(db):
+    muc = crud.create_event(db, MEMBER, "2025-03-14", "Giữ nguyên")
 
-    assert (them, bo_qua) == (1, 1)
-
-
-def test_import_danh_sach_rong(db):
-    assert crud.import_transactions(db, []) == (0, 0)
-    assert crud.import_transactions(db, None) == (0, 0)
+    assert crud.update_event(db, muc.id, "", "", "") is None
+    assert crud.get_event(db, muc.id).title == "Giữ nguyên"
 
 
-def test_import_lai_dong_co_ngay_hong_van_khong_nhan_doi(db):
-    """Ngày hỏng được chuẩn hoá về hôm nay lúc ghi; khoá so trùng phải dùng
-    đúng giá trị đã chuẩn hoá đó, không thì lần import sau ghi lại lần nữa."""
-    rows = [_dong(ref="", ngay="ngay-hong")]
-
-    crud.import_transactions(db, rows)
-    them, bo_qua = crud.import_transactions(db, rows)
-
-    assert (them, bo_qua) == (0, 1)
+def test_sua_muc_khong_ton_tai_tra_none(db):
+    assert crud.update_event(db, 999, "Gì đó", "", "") is None
 
 
-def test_import_lam_sach_du_lieu_ban(db):
-    them, _ = crud.import_transactions(db, [
-        {"amount": "-99", "kind": "linh tinh", "category": "bia dat",
-         "note": "  x  ", "date": "sai bet", "source": "?", "ref": ""},
-    ])
+def test_xoa_mot_muc(db):
+    muc = crud.create_event(db, MEMBER, "2025-03-14", "Việc")
 
-    tx = db.query(crud.models.Transaction).one()
-
-    assert them == 1
-    assert tx.amount == 0
-    assert tx.kind == "out"
-    assert tx.category == "khac"
-    assert tx.note == "x"
-    assert tx.date == date.today().isoformat()
+    assert crud.delete_event(db, muc.id) is True
+    assert crud.get_events(db, "2025-03") == []

@@ -248,7 +248,7 @@ def test_user_bi_xoa_thi_cookie_cu_khong_con_dung_duoc():
 
 # ------------------------------------------------- 4. cổng vào (HTTP thật)
 
-CAC_TRANG_RIENG = ["/", "/food", "/study", "/plan", "/budget", "/healthz"]
+CAC_TRANG_RIENG = ["/", "/food", "/study", "/plan", "/schedule", "/healthz"]
 
 
 @pytest.mark.parametrize("path", CAC_TRANG_RIENG)
@@ -331,15 +331,15 @@ def test_thoat_thi_mat_quyen_vao(logged_in):
 
 
 def test_dang_nhap_xong_quay_lai_dung_trang_dang_dinh_xem(client):
-    res = client.get("/budget", follow_redirects=False)
-    assert res.headers["location"] == "/login?next=/budget"
+    res = client.get("/schedule", follow_redirects=False)
+    assert res.headers["location"] == "/login?next=/schedule"
 
     res = client.post("/login",
                       data={"username": MEMBER, "password": GOOD_PASSWORD,
-                            "next": "/budget"},
+                            "next": "/schedule"},
                       follow_redirects=False)
 
-    assert res.headers["location"] == "/budget"
+    assert res.headers["location"] == "/schedule"
 
 
 @pytest.mark.parametrize("doc_hai", [

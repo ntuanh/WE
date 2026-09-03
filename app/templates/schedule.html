@@ -1,0 +1,181 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<div class="cal-panel">
+
+    {% if msg %}<div class="cal-flash">{{ msg }}</div>{% endif %}
+
+    <!-- CHỌN THÁNG -->
+    <div class="cal-top">
+        <a class="cal-nav" href="/schedule?month={{ prev_month }}" title="Tháng trước">‹</a>
+        <h2 class="cal-title">{{ month_label }}</h2>
+        <a class="cal-nav" href="/schedule?month={{ next_month }}" title="Tháng sau">›</a>
+
+        {% if month != this_month %}
+        <a class="cal-today" href="/schedule">Về tháng này</a>
+        {% endif %}
+
+        <form method="get" action="/schedule" class="cal-jump">
+            <input type="month" name="month" value="{{ month }}" aria-label="Nhảy tới tháng">
+            <button type="submit">Đi</button>
+        </form>
+    </div>
+
+    <!-- HAI CUỐN LỊCH -->
+    <div class="cal-board">
+
+        {% for c in calendars %}
+        <section class="cal-card {{ 'one' if loop.first else 'two' }}">
+
+            <header class="cal-owner">
+                <span class="cal-avatar">{{ c.owner[0] | upper }}</span>
+                <b>{{ c.owner }}</b>
+                {% if c.me %}<small>bạn</small>{% endif %}
+                <span class="cal-count">{{ c.count }} việc</span>
+            </header>
+
+            <table class="cal">
+                <thead>
+                    <tr>
+                        {% for d in weekdays %}
+                        <th{% if loop.last %} class="sun"{% endif %}>{{ d }}</th>
+                        {% endfor %}
+                    </tr>
+                </thead>
+
+                {% for week in c.weeks %}
+                <tbody>
+                    <tr class="cal-week">
+                        {% for cell in week %}
+                        <td>
+                            {% if cell.in_month %}
+                            <button type="button"
+                                    class="cal-day{% if cell.today %} today{% endif %}{% if cell.events %} has{% endif %}"
+                                    aria-controls="day-{{ c.owner }}-{{ cell.date }}"
+                                    aria-expanded="{{ 'true' if c.owner ~ ':' ~ cell.date == open_key else 'false' }}"
+                                    title="{{ cell.label }}{% for e in cell.events %} · {{ e.title }}{% endfor %}">
+                                <b>{{ cell.day }}</b>
+
+                                {% if cell.events %}
+                                <span class="cal-dots">
+                                    {% for e in cell.events[:3] %}<i></i>{% endfor %}
+                                    {% if cell.events | length > 3 %}<em>+{{ cell.events | length - 3 }}</em>{% endif %}
+                                </span>
+                                {% endif %}
+                            </button>
+                            {% else %}
+                            <span class="cal-day out">{{ cell.day }}</span>
+                            {% endif %}
+                        </td>
+                        {% endfor %}
+                    </tr>
+
+                    {# Phần chi tiết nằm ngay dưới đúng tuần của nó — bấm ngày nào
+                       thì nó bung ra ngay chỗ đó, lịch không nhảy đi đâu cả. #}
+                    {% for cell in week if cell.in_month %}
+                    <tr class="cal-detail" id="day-{{ c.owner }}-{{ cell.date }}"
+                        {% if c.owner ~ ':' ~ cell.date != open_key %}hidden{% endif %}>
+                        <td colspan="7">
+
+                            <h4>{{ cell.label }}</h4>
+
+                            {% if cell.events %}
+                            <div class="ev-list">
+                                {% for e in cell.events %}
+                                <details class="ev">
+                                    <summary>
+                                        <span class="ev-time">{{ e.start if e.start else 'cả ngày' }}</span>
+                                        <span class="ev-title">{{ e.title }}</span>
+                                        {% if e.note %}<span class="ev-note">{{ e.note }}</span>{% endif %}
+                                    </summary>
+
+                                    <div class="ev-tools">
+                                        <form method="post" action="/schedule/edit/{{ e.id }}">
+                                            <input type="time" name="start" value="{{ e.start }}"
+                                                   aria-label="Giờ bắt đầu">
+                                            <input name="title" value="{{ e.title }}" required
+                                                   aria-label="Tên việc">
+                                            <input name="note" value="{{ e.note }}" placeholder="Ghi chú"
+                                                   aria-label="Ghi chú">
+                                            <button type="submit">Lưu</button>
+                                        </form>
+
+                                        <form method="post" action="/schedule/delete/{{ e.id }}"
+                                              onsubmit="return confirm('Xoá việc này?')">
+                                            <button type="submit" class="ev-del" title="Xoá">🗑</button>
+                                        </form>
+                                    </div>
+                                </details>
+                                {% endfor %}
+                            </div>
+                            {% else %}
+                            <p class="ev-empty">Chưa có gì — ngày trống ♡</p>
+                            {% endif %}
+
+                            <form method="post" action="/schedule/add" class="ev-add">
+                                <input type="hidden" name="owner" value="{{ c.owner }}">
+                                <input type="hidden" name="date" value="{{ cell.date }}">
+
+                                <input type="time" name="start" aria-label="Giờ bắt đầu">
+                                <input name="title" placeholder="Thêm việc..." required
+                                       aria-label="Tên việc">
+                                <input name="note" placeholder="Ghi chú" aria-label="Ghi chú">
+
+                                <button type="submit">+ Thêm</button>
+                            </form>
+
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                {% endfor %}
+            </table>
+
+        </section>
+        {% endfor %}
+
+    </div>
+
+</div>
+
+<script>
+(function () {
+    function shut(row) {
+        row.hidden = true;
+
+        var btn = document.querySelector('[aria-controls="' + row.id + '"]');
+        if (btn) btn.setAttribute("aria-expanded", "false");
+    }
+
+    document.querySelectorAll(".cal").forEach(function (cal) {
+        cal.addEventListener("click", function (event) {
+            var btn = event.target.closest(".cal-day[aria-controls]");
+            if (!btn) return;
+
+            var row = document.getElementById(btn.getAttribute("aria-controls"));
+            if (!row) return;
+
+            var opening = row.hidden;
+
+            // Trong cùng một cuốn lịch chỉ mở một ngày, nhưng lịch bên kia để
+            // nguyên — mở cùng một ngày ở cả hai bên mới so lịch nhau được.
+            cal.querySelectorAll(".cal-detail:not([hidden])").forEach(shut);
+
+            if (opening) {
+                row.hidden = false;
+                btn.setAttribute("aria-expanded", "true");
+
+                var box = row.querySelector('.ev-add input[name="title"]');
+                if (box) box.focus({ preventScroll: true });
+            }
+        });
+    });
+
+    // Thêm/sửa xong, server mở lại đúng ngày vừa làm — kéo nó vào tầm mắt.
+    var open = document.querySelector(".cal-detail:not([hidden])");
+    if (open) open.scrollIntoView({ block: "center" });
+})();
+</script>
+
+{% endblock %}

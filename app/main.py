@@ -9,7 +9,7 @@ from app.log import log
 from app.database import Base, engine
 from app.templating import templates, STATIC_DIR
 from app.routes import auth as auth_routes
-from app.routes import budget, food, plan, study
+from app.routes import food, plan, schedule, study
 
 
 def _boot() -> None:
@@ -116,4 +116,4 @@ app.include_router(auth_routes.router)
 app.include_router(food.router)
 app.include_router(study.router)
 app.include_router(plan.router)
-app.include_router(budget.router)
+app.include_router(schedule.router)

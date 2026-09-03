@@ -7,7 +7,7 @@ A lightweight, fast, and responsive web application built with Python and FastAP
 * **Food Board:** A drag-and-drop kanban across three columns (Đã ăn / Chưa ăn / Muốn ăn), with photo thumbnails, a 0–5 star rating, and a one-tap Google Maps link per place.
 * **Study Management:** Keep track of your study spots and edit them in place.
 * **Daily Planning:** A todo list with priority badges, deadlines, and tick-to-complete.
-* **Spending & Budget:** A monthly budget cap, a category donut, a per-day bar chart, and a transaction history — filled in by hand or imported from a MoMo statement (see [MoMo import](#-momo-import)).
+* **Shared Calendar:** Two month calendars side by side, one per account, in matching tones. Click any day to expand it in place and read, add, edit, or delete what is on it — so both of you can see the other's week at a glance.
 * **Login Gate:** Every page sits behind a username/password form — two accounts, one of them admin. Passwords are PBKDF2 hashes, the session is an HMAC-signed cookie, and repeated wrong guesses lock the account out for a while.
 * **Glass Aesthetic:** Frosted-glass panels over a full-bleed video background, with a warm oklch palette and responsive breakpoints down to mobile.
 * **Interactive UI:** Background videos for an immersive experience, and an auto-highlighting nav bar.
@@ -38,14 +38,13 @@ This project leverages the following technologies:
 │   ├── models.py        # SQLAlchemy database models
 │   ├── schemas.py       # Pydantic models for data validation
 │   ├── crud.py          # Create, Read, Update, Delete database functions
-│   ├── momo.py          # MoMo statement CSV parser + spending categories
 │   ├── auth.py          # Accounts, password hashing, signed session cookie
 │   ├── log.py           # Startup logging that can't crash on a cp1252 console
 │   ├── users.example.json  # Template for the account file (committed)
 │   ├── users.local.json    # Real password hashes — git-ignored, never pushed
 │   ├── routes/          # API and View routers
 │   │   ├── auth.py      # Login / logout routes
-│   │   ├── budget.py    # Spending, budget, and MoMo import routes
+│   │   ├── schedule.py  # Shared-calendar routes
 │   │   ├── food.py      # Food-related routes
 │   │   ├── plan.py      # Planning-related routes
 │   │   └── study.py     # Study-related routes
@@ -56,7 +55,7 @@ This project leverages the following technologies:
 │   │   └── bghome.mp4
 │   └── templates/       # Jinja2 HTML templates
 │       ├── base.html
-│       ├── budget.html
+│       ├── schedule.html
 │       ├── index.html
 │       ├── food.html
 │       ├── edit_food.html
@@ -69,7 +68,6 @@ This project leverages the following technologies:
 │   ├── test_auth.py
 │   ├── test_crud.py
 │   ├── test_database.py
-│   ├── test_momo.py
 │   └── test_routes.py
 ├── we.db                # SQLite Database file — local only, git-ignored
 ├── requirements.txt     # Python dependencies
@@ -163,7 +161,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-203 tests, no network and no touching `we.db` — `tests/conftest.py` points the
+193 tests, no network and no touching `we.db` — `tests/conftest.py` points the
 app at an in-memory SQLite before importing it, and swaps in throwaway accounts
 so the real password hashes are never needed.
 
@@ -171,28 +169,31 @@ so the real password hashes are never needed.
 | --- | --- |
 | `tests/test_auth.py` | password hashing, login, brute-force lockout, session cookie forgery/expiry, the login gate on every page |
 | `tests/test_database.py` | the "new column, old database" case, repeat-safe migrations, data surviving a restart, database selection |
-| `tests/test_crud.py` | input cleaning and validation, statement de-duplication |
+| `tests/test_crud.py` | input cleaning and validation, calendar ownership rules |
 | `tests/test_routes.py` | each page and form end-to-end over HTTP |
-| `tests/test_momo.py` | statement parsing: header variants, encodings, amount and date formats |
 
-## 💸 MoMo import
+## 🗓 Shared calendar
 
-**MoMo has no public API for a personal wallet's balance or history.**
-`developers.momo.vn` is a merchant payment gateway — it can create a payment, receive
-an IPN callback, and query a transaction *your own merchant account* created. Nothing
-there exposes your personal spending feed, so this app cannot sync from MoMo on its own.
+`/schedule` puts one month calendar per account side by side — the accounts come
+from `auth.USERS`, so nobody's name is hard-coded and the page follows whatever
+two logins exist.
 
-What it does instead is read the statement MoMo already lets you export:
+A day cell shows a dot per entry (three, then `+n`); clicking it expands a panel
+**inside that same week row**, so the grid never jumps around underneath you.
+The panel holds that day's entries — each one expandable into an edit form — plus
+a form to add another. Only one day is open per calendar, but the two calendars
+open independently, which is the point: put the same date up on both and you can
+see where the two weeks collide.
 
-1. MoMo app → **Ví của tôi** → **Lịch sử giao dịch** → **Sao kê**
-2. Pick a date range and download the CSV
-3. Upload it on `/budget`
+The expand state is real HTML, not just JavaScript. Every day's panel is rendered
+server-side and hidden, the JS only flips `hidden`, and after a submit the server
+redirects back with `?open=<account>:<date>` so the day you were working on is
+still open when the page comes back.
 
-`app/momo.py` matches columns by keyword rather than position (MoMo renames them between
-exports), copes with `-50.000đ` / `+1,200,000` amount formats and UTF‑8/UTF‑16 encodings,
-and guesses a category from the description (Grab → Đi lại, Shopee → Mua sắm, …).
-Imports are deduplicated on the MoMo transaction ID, so re-uploading a file that overlaps
-an earlier one will not double-count anything.
+Entries are stored per account with an optional `HH:MM` — leaving the time empty
+means an all-day entry, and those sort to the top of the day. An entry can only be
+filed under an account that actually exists: a bad `owner` is rejected outright
+rather than quietly landing on the other person's calendar.
 
 ## 🔐 Accounts & passwords
 

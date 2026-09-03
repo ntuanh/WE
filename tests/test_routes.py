@@ -1,6 +1,6 @@
 """Test cho các route — đi qua HTTP thật, có đăng nhập sẵn."""
 
-from urllib.parse import unquote
+from urllib.parse import quote, unquote
 
 import pytest
 
@@ -163,120 +163,123 @@ def test_sua_ke_hoach_qua_trang_web(logged_in, db):
     assert crud.get_plan(db, ke_hoach.id).title == "Mới"
 
 
-# ---------- chi tiêu ----------
+# ---------- lịch ----------
 
-def test_them_giao_dich(logged_in, db):
-    res = logged_in.post("/budget/add", data={
-        "amount": "150000", "kind": "out", "category": "an",
-        "note": "Ăn trưa", "date": "2025-03-14", "source": "momo",
+def test_trang_lich_co_du_hai_cuon(logged_in):
+    from tests.conftest import ADMIN, MEMBER
+
+    trang = logged_in.get("/schedule").text
+
+    assert trang.count('<table class="cal">') == 2
+    assert ADMIN in trang and MEMBER in trang
+
+
+def test_them_viec_vao_lich(logged_in, db):
+    from tests.conftest import MEMBER
+
+    res = logged_in.post("/schedule/add", data={
+        "owner": MEMBER, "date": "2025-03-14", "title": "Đi xem phim",
+        "start": "19:30", "note": "CGV",
     }, follow_redirects=False)
 
-    assert res.headers["location"].startswith("/budget?month=2025-03")
-    assert crud.get_transactions(db, "2025-03")[0].amount == 150_000
+    assert res.status_code == 303
+    assert crud.get_events(db, "2025-03")[0].title == "Đi xem phim"
 
 
-def test_so_tien_co_dau_cham_van_hieu(logged_in, db):
-    """Gõ "150.000" theo thói quen thì cũng phải hiểu."""
-    logged_in.post("/budget/add", data={
-        "amount": "150.000", "kind": "out", "category": "an",
-        "note": "", "date": "2025-03-14", "source": "momo",
+def test_them_xong_thi_mo_lai_dung_ngay_do(logged_in):
+    """Submit xong mà ô vừa mở lại đóng sập thì thêm việc thứ hai rất khó chịu."""
+    from tests.conftest import MEMBER
+
+    res = logged_in.post("/schedule/add", data={
+        "owner": MEMBER, "date": "2025-03-14", "title": "Việc", "start": "", "note": "",
     }, follow_redirects=False)
 
-    assert crud.get_transactions(db, "2025-03")[0].amount == 150_000
+    quay_ve = unquote(res.headers["location"])
+
+    assert "month=2025-03" in quay_ve
+    assert f"open={MEMBER}:2025-03-14" in quay_ve
 
 
-@pytest.mark.parametrize("so_tien", ["", "0", "-5000", "linh tinh"])
-def test_so_tien_khong_hop_le_thi_bao_loi_chu_khong_500(logged_in, db, so_tien):
-    res = logged_in.post("/budget/add", data={
-        "amount": so_tien, "kind": "out", "category": "an",
-        "note": "", "date": "2025-03-14", "source": "momo",
+def test_o_dang_mo_duoc_bung_san_khong_can_javascript(logged_in, db):
+    from tests.conftest import MEMBER
+
+    crud.create_event(db, MEMBER, "2025-03-14", "Đi xem phim")
+
+    trang = logged_in.get(f"/schedule?month=2025-03&open={MEMBER}:2025-03-14").text
+    mo = trang.split(f'id="day-{MEMBER}-2025-03-14"')[1][:40]
+
+    assert "hidden" not in mo
+
+
+def test_khong_them_duoc_vao_lich_nguoi_khong_co_that(logged_in, db):
+    res = logged_in.post("/schedule/add", data={
+        "owner": "nguoi-la", "date": "2025-03-14", "title": "Việc",
+        "start": "", "note": "",
     }, follow_redirects=False)
 
     assert res.status_code == 303
     assert "msg=" in res.headers["location"]
-    assert crud.get_transactions(db, "2025-03") == []
+    assert crud.get_events(db, "2025-03") == []
 
 
-def test_thang_bay_ba_khong_lam_vo_trang(logged_in):
-    """int(month[:4]) trong _summarise sẽ nổ nếu month không phải YYYY-MM."""
-    assert logged_in.get("/budget?month=linh-tinh").status_code == 200
-    assert logged_in.get("/budget?month=9999-99").status_code == 200
-    assert logged_in.get("/budget?month=").status_code == 200
+def test_thang_bay_ba_khong_lam_vo_trang_lich(logged_in):
+    """int(month[:4]) trong _grid sẽ nổ nếu month không phải YYYY-MM."""
+    assert logged_in.get("/schedule?month=linh-tinh").status_code == 200
+    assert logged_in.get("/schedule?month=9999-99").status_code == 200
+    assert logged_in.get("/schedule?month=").status_code == 200
 
 
-def test_dat_han_muc(logged_in, db):
-    logged_in.post("/budget/set", data={"month": "2025-03", "amount": "5000000"},
-                   follow_redirects=False)
+def test_qua_thang_12_thi_sang_nam_moi(logged_in):
+    truoc = logged_in.get("/schedule?month=2025-01").text
+    sau = logged_in.get("/schedule?month=2025-12").text
 
-    assert crud.get_budget(db, "2025-03").amount == 5_000_000
-
-
-def test_xoa_giao_dich_quay_ve_dung_thang(logged_in, db):
-    tx = crud.create_transaction(db, 50_000, "out", "an", "", "2025-03-14")
-
-    res = logged_in.post(f"/budget/delete/{tx.id}", follow_redirects=False)
-
-    assert "month=2025-03" in res.headers["location"]
-    assert crud.get_transactions(db, "2025-03") == []
+    assert "/schedule?month=2024-12" in truoc
+    assert "/schedule?month=2026-01" in sau
 
 
-def test_trang_chi_tieu_cong_dung_tong(logged_in, db):
-    crud.create_transaction(db, 100_000, "out", "an", "", "2025-03-01")
-    crud.create_transaction(db, 50_000, "out", "di_lai", "", "2025-03-02")
-    crud.create_transaction(db, 500_000, "in", "khac", "Lương", "2025-03-03")
+def test_sua_mot_muc_trong_lich(logged_in, db):
+    from tests.conftest import MEMBER
 
-    trang = logged_in.get("/budget?month=2025-03").text
+    muc = crud.create_event(db, MEMBER, "2025-03-14", "Cũ")
 
-    assert "150.000" in trang       # tổng chi
-    assert "500.000" in trang       # tổng thu
+    logged_in.post(f"/schedule/edit/{muc.id}", data={
+        "title": "Mới", "start": "20:00", "note": "đổi giờ",
+    }, follow_redirects=False)
 
-
-# ---------- nhập sao kê ----------
-
-SAO_KE = (
-    "Thời gian,Số tiền,Mô tả,Mã giao dịch\n"
-    "14/03/2025 12:30:00,-50.000,Highlands Coffee,GD001\n"
-    "15/03/2025 08:00:00,-120.000,Grab,GD002\n"
-    "16/03/2025 09:00:00,+2.000.000,Nhận tiền,GD003\n"
-)
+    assert crud.get_event(db, muc.id).title == "Mới"
 
 
-def test_nhap_file_sao_ke(logged_in, db):
-    res = logged_in.post("/budget/import",
-                         files={"file": ("saoke.csv", SAO_KE.encode(), "text/csv")},
-                         follow_redirects=False)
+def test_xoa_mot_muc_quay_ve_dung_ngay(logged_in, db):
+    from tests.conftest import MEMBER
 
-    assert "Đã nhập 3 giao dịch" in unquote(res.headers["location"])
-    assert len(crud.get_transactions(db, "2025-03")) == 3
+    muc = crud.create_event(db, MEMBER, "2025-03-14", "Việc")
 
+    res = logged_in.post(f"/schedule/delete/{muc.id}", follow_redirects=False)
 
-def test_nhap_lai_dung_file_do_khong_nhan_doi(logged_in, db):
-    for _ in range(2):
-        logged_in.post("/budget/import",
-                       files={"file": ("saoke.csv", SAO_KE.encode(), "text/csv")},
-                       follow_redirects=False)
-
-    assert len(crud.get_transactions(db, "2025-03")) == 3
+    assert f"open={quote(MEMBER + ':2025-03-14')}" in res.headers["location"]
+    assert crud.get_events(db, "2025-03") == []
 
 
-def test_file_khong_phai_sao_ke_thi_bao_nhe_nhang(logged_in, db):
-    res = logged_in.post("/budget/import",
-                         files={"file": ("anh.csv", b"day khong phai csv", "text/csv")},
-                         follow_redirects=False)
+def test_khong_xoa_duoc_muc_lich_bang_get(logged_in, db):
+    from tests.conftest import MEMBER
 
-    assert res.status_code == 303
-    assert "msg=" in res.headers["location"]
-    assert crud.get_months(db) == []
+    muc = crud.create_event(db, MEMBER, "2025-03-14", "Việc")
+
+    assert logged_in.get(f"/schedule/delete/{muc.id}",
+                         follow_redirects=False).status_code == 405
+    assert len(crud.get_events(db, "2025-03")) == 1
 
 
-def test_file_qua_lon_bi_tu_choi(logged_in):
-    to_qua = b"x" * (5 * 1024 * 1024 + 100)
+def test_lich_hien_viec_cua_ca_hai_dua(logged_in, db):
+    from tests.conftest import ADMIN, MEMBER
 
-    res = logged_in.post("/budget/import",
-                         files={"file": ("to.csv", to_qua, "text/csv")},
-                         follow_redirects=False)
+    crud.create_event(db, MEMBER, "2025-03-14", "Việc của mình")
+    crud.create_event(db, ADMIN, "2025-03-20", "Việc của người kia")
 
-    assert "lớn quá" in unquote(res.headers["location"])
+    trang = logged_in.get("/schedule?month=2025-03").text
+
+    assert "Việc của mình" in trang
+    assert "Việc của người kia" in trang
 
 
 # ---------- linh tinh ----------

@@ -1,4 +1,4 @@
-from sqlalchemy import BigInteger, Column, Integer, String
+from sqlalchemy import Column, Integer, String
 from .database import Base
 
 class FoodPlace(Base):
@@ -32,26 +32,19 @@ class Plan(Base):
     priority = Column(String, default="normal")  # low / normal / high
     deadline = Column(String, default="")
 
-class Transaction(Base):
-    """Một giao dịch tiền — nhập tay hoặc import từ sao kê MoMo."""
 
-    __tablename__ = "transactions"
+class ScheduleEvent(Base):
+    """Một mục trong lịch của một người.
+
+    `owner` là tên đăng nhập — mỗi người một cuốn lịch riêng, nhưng cả hai đứa
+    đều xem được lịch của nhau (đó mới là điểm của cái trang này).
+    """
+
+    __tablename__ = "schedule_events"
 
     id = Column(Integer, primary_key=True, index=True)
-    amount = Column(BigInteger, default=0)   # VND, luôn là số dương
-    kind = Column(String, default="out")     # out = chi | in = thu
-    category = Column(String, default="khac")
+    owner = Column(String, index=True)       # tên đăng nhập của chủ lịch
+    date = Column(String, index=True)        # "YYYY-MM-DD"
+    start = Column(String, default="")       # "HH:MM", để trống là cả ngày
+    title = Column(String)
     note = Column(String, default="")
-    date = Column(String, default="")        # "YYYY-MM-DD", như deadline của Plan
-    source = Column(String, default="momo")  # momo | tien_mat | bank
-    ref = Column(String, default="", index=True)  # mã GD MoMo — để import 2 lần không bị nhân đôi
-
-
-class Budget(Base):
-    """Hạn mức chi cho một tháng."""
-
-    __tablename__ = "budgets"
-
-    id = Column(Integer, primary_key=True, index=True)
-    month = Column(String, index=True)   # "YYYY-MM"
-    amount = Column(BigInteger, default=0)

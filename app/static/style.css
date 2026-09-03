@@ -114,7 +114,7 @@ body {
 }
 
 /* Shared glass panel */
-.food-panel, .study-panel {
+.food-panel, .study-panel, .cal-panel {
   animation: rise 0.5s ease both;
 }
 
@@ -669,8 +669,8 @@ button:active { transform: translateY(0); }
   .form-wrapper button { width: 100%; }
 }
 
-/* ---------- CHI TIÊU / BUDGET ---------- */
-.money-flash {
+/* ---------- LỊCH / SCHEDULE ---------- */
+.cal-flash {
   background: var(--glass-strong);
   border: 1px solid var(--glass-brd);
   border-left: 4px solid var(--coral);
@@ -682,285 +682,331 @@ button:active { transform: translateY(0); }
   font-size: 14.5px;
 }
 
-.money-top { display: flex; flex-wrap: wrap; gap: 14px; align-items: center; }
-.money-top form { display: flex; gap: 10px; align-items: center; margin: 0; }
-.money-month { flex: 0 0 auto; }
-.money-limit { flex: 1 1 260px; }
+/* thanh chọn tháng */
+.cal-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 18px;
+}
 
-.money-top select, .money-top input {
-  font-family: inherit;
-  font-size: 15px;
+.cal-title {
+  font-family: 'Quicksand', sans-serif;
+  font-size: 21px;
+  font-weight: 700;
+  margin: 0;
+  min-width: 150px;
+  text-align: center;
+}
+
+.cal-nav {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  flex: none;
+  font-size: 22px;
+  line-height: 1;
   color: var(--ink);
-  padding: 11px 14px;
+  text-decoration: none;
+  background: var(--glass-strong);
+  border: 1px solid var(--glass-brd);
+  border-radius: 50%;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s, color 0.15s;
+}
+
+.cal-nav:hover { color: var(--coral-deep); transform: translateY(-2px); }
+
+.cal-today {
+  font-size: 13.5px;
+  font-weight: 700;
+  color: var(--coral-deep);
+  text-decoration: none;
+  padding: 8px 14px;
+  background: oklch(1 0 0 / 0.6);
+  border: 1px solid var(--glass-brd);
+  border-radius: 999px;
+}
+
+.cal-today:hover { background: oklch(1 0 0 / 0.85); }
+
+.cal-jump { display: flex; gap: 8px; margin-left: auto; }
+
+.cal-jump input {
+  font-family: inherit;
+  font-size: 14px;
+  color: var(--ink);
+  padding: 9px 12px;
   background: oklch(1 0 0 / 0.85);
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
   outline: none;
 }
 
-.money-limit input { flex: 1 1 auto; min-width: 0; }
+.cal-jump button { font-size: 14px; padding: 9px 18px; }
 
-/* ô tổng quan */
-.money-tiles {
+/* hai cuốn lịch cạnh nhau */
+.cal-board {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 14px;
-  margin-bottom: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+  align-items: start;
 }
 
-.money-tile {
-  background: var(--glass-strong);
-  border: 1px solid var(--glass-brd);
-  border-radius: var(--r);
-  box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(16px) saturate(1.25);
-  padding: 16px 18px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
+.cal-card {
+  --tone: var(--coral);
+  --tone-deep: var(--coral-deep);
+  --tone-soft: oklch(0.70 0.15 25 / 0.12);
 
-.money-tile small {
-  font-family: 'Quicksand', sans-serif;
-  font-weight: 600;
-  font-size: 12.5px;
-  color: var(--ink-soft);
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
-}
-
-.money-tile b { font-size: 24px; font-weight: 800; line-height: 1.1; }
-.money-tile b span { font-size: 14px; font-weight: 700; color: var(--ink-soft); margin-left: 4px; }
-.money-tile.out b { color: var(--coral-deep); }
-.money-tile.in b  { color: oklch(0.52 0.13 150); }
-.money-tile.over b { color: var(--red); }
-
-/* thanh hạn mức */
-.money-bar {
-  position: relative;
-  height: 34px;
-  background: var(--glass-strong);
-  border: 1px solid var(--glass-brd);
-  border-radius: 999px;
-  box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(14px);
-  overflow: hidden;
-  margin-bottom: 22px;
-}
-
-.money-bar-fill {
-  height: 100%;
-  background: linear-gradient(90deg, var(--green), oklch(0.70 0.13 150));
-  transition: width 0.4s ease;
-}
-
-.money-bar-fill.warn { background: linear-gradient(90deg, var(--gold), oklch(0.76 0.14 60)); }
-.money-bar-fill.over { background: linear-gradient(90deg, var(--coral), var(--coral-deep)); }
-
-.money-bar span {
-  position: absolute;
-  inset: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: 'Quicksand', sans-serif;
-  font-weight: 700;
-  font-size: 13px;
-  color: var(--ink);
-}
-
-/* thẻ biểu đồ */
-.money-charts, .money-forms {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  margin-bottom: 22px;
-}
-
-.money-card {
+  min-width: 0;
+  padding: 14px 14px 16px;
   background: var(--glass);
   border: 1px solid var(--glass-brd);
   border-radius: var(--r);
   box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(16px) saturate(1.25);
-  padding: 18px;
+  backdrop-filter: blur(18px) saturate(1.3);
 }
 
-.money-card h3 {
-  font-family: 'Quicksand', sans-serif;
-  font-size: 16px;
-  margin: 0 0 16px;
-  padding-bottom: 12px;
+/* Cuốn thứ hai đổi tông màu — liếc một cái là biết đang xem lịch của ai. */
+.cal-card.two {
+  --tone: oklch(0.68 0.12 305);
+  --tone-deep: oklch(0.56 0.14 310);
+  --tone-soft: oklch(0.68 0.12 305 / 0.13);
+}
+
+.cal-owner {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding-bottom: 11px;
+  margin-bottom: 8px;
   border-bottom: 1px solid var(--line);
 }
 
-.money-empty { color: var(--ink-soft); font-size: 14px; margin: 6px 0; }
-.money-note { color: var(--ink-soft); font-size: 12.5px; line-height: 1.5; margin: 12px 0 0; }
-
-/* vòng tròn hạng mục */
-.donut-wrap { display: flex; gap: 18px; align-items: center; flex-wrap: wrap; }
-.donut { width: 160px; height: 160px; flex: none; transform: rotate(-90deg); }
-.donut-track { fill: none; stroke: oklch(0.93 0.01 60); stroke-width: 17; }
-
-.donut-slice {
-  fill: none;
-  stroke-width: 17;
-  stroke-linecap: butt;
-  transition: stroke-width 0.15s;
-}
-
-.donut-slice:hover { stroke-width: 20; }
-
-.donut-value, .donut-label {
-  transform: rotate(90deg);
-  transform-origin: 70px 70px;
-  text-anchor: middle;
+.cal-avatar {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  flex: none;
   font-family: 'Quicksand', sans-serif;
-  fill: var(--ink);
+  font-size: 15px;
+  font-weight: 700;
+  color: white;
+  background: linear-gradient(135deg, var(--tone), var(--tone-deep));
+  border-radius: 50%;
 }
 
-.donut-value { font-size: 19px; font-weight: 700; }
-.donut-label { font-size: 9px; fill: var(--ink-soft); letter-spacing: 0.08em; }
+.cal-owner b { font-size: 15.5px; font-weight: 800; }
 
-.donut-legend { flex: 1 1 180px; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
-.legend-row { display: flex; align-items: center; gap: 8px; font-size: 13.5px; }
-.legend-row i { width: 11px; height: 11px; border-radius: 4px; flex: none; }
-.legend-row span { flex: 1 1 auto; min-width: 0; color: var(--ink-soft); }
-.legend-row b { font-weight: 800; white-space: nowrap; }
-.legend-row small { color: var(--ink-soft); width: 34px; text-align: right; }
-
-/* cột theo ngày */
-.daybars {
-  display: flex;
-  align-items: flex-end;
-  gap: 3px;
-  height: 150px;
-  padding-top: 6px;
+.cal-owner small {
+  font-size: 11px;
+  font-weight: 800;
+  color: var(--tone-deep);
+  background: var(--tone-soft);
+  padding: 2px 8px;
+  border-radius: 999px;
 }
 
-.daybar {
-  flex: 1 1 0;
-  height: 100%;
+.cal-count { margin-left: auto; font-size: 12.5px; color: var(--ink-soft); }
+
+/* bảng lịch */
+.cal {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: separate;
+  border-spacing: 3px;
+}
+
+.cal th {
+  padding: 2px 0 5px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.07em;
+  color: var(--ink-soft);
+}
+
+.cal th.sun { color: var(--tone-deep); }
+.cal td { padding: 0; vertical-align: top; }
+
+/* Một ô ngày. Là <button> nên phải ghi đè nút mặc định (nền cam, chữ trắng). */
+.cal-day {
   display: flex;
   flex-direction: column;
-  justify-content: flex-end;
-  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  width: 100%;
+  min-height: 46px;
+  padding: 6px 2px;
+  font-family: 'Nunito', system-ui, sans-serif;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--ink);
+  background: oklch(1 0 0 / 0.5);
+  border: 1px solid transparent;
+  border-radius: 12px;
+  box-shadow: none;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
 }
 
-.daybar-fill {
-  background: linear-gradient(180deg, var(--coral), var(--coral-deep));
-  border-radius: 5px 5px 2px 2px;
-  min-height: 2px;
-  transition: filter 0.15s;
+.cal-day:hover { background: oklch(1 0 0 / 0.9); transform: none; filter: none; }
+.cal-day.has { background: var(--tone-soft); }
+.cal-day.today { border-color: var(--tone); font-weight: 800; }
+
+.cal-day[aria-expanded="true"] {
+  color: white;
+  background: linear-gradient(135deg, var(--tone), var(--tone-deep));
+  border-color: transparent;
 }
 
-.daybar:hover .daybar-fill { filter: brightness(1.12); }
-
-.daybar small {
-  font-size: 9px;
+/* Ngày của tháng bên cạnh: để trơ, bấm vào cũng không mở được. */
+.cal-day.out {
   color: var(--ink-soft);
-  text-align: center;
-  height: 12px;
-  line-height: 12px;
+  background: none;
+  opacity: 0.35;
+  cursor: default;
 }
 
-/* form thêm & import */
-.money-add, .money-import { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.cal-dots { display: flex; align-items: center; gap: 3px; height: 6px; }
 
-.money-add input, .money-add select, .money-import input {
-  flex: 1 1 130px;
+.cal-dots i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--tone-deep);
+}
+
+.cal-dots em {
+  font-style: normal;
+  font-size: 9px;
+  font-weight: 800;
+  color: var(--ink-soft);
+}
+
+.cal-day[aria-expanded="true"] .cal-dots i { background: white; }
+.cal-day[aria-expanded="true"] .cal-dots em { color: oklch(1 0 0 / 0.85); }
+
+/* phần bung ra khi bấm vào một ngày */
+.cal-detail[hidden] { display: none; }
+
+.cal-detail > td {
+  padding: 12px 14px 13px;
+  background: oklch(1 0 0 / 0.66);
+  border: 1px solid var(--glass-brd);
+  border-left: 3px solid var(--tone);
+  border-radius: var(--r-sm);
+  animation: rise 0.22s ease both;
+}
+
+.cal-detail h4 {
+  margin: 0 0 10px;
+  font-family: 'Quicksand', sans-serif;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: var(--tone-deep);
+}
+
+.ev-list { display: flex; flex-direction: column; gap: 7px; margin-bottom: 12px; }
+
+.ev {
+  background: oklch(1 0 0 / 0.8);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+}
+
+.ev[open] { box-shadow: var(--shadow-sm); }
+
+.ev > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  padding: 8px 11px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.ev > summary::-webkit-details-marker { display: none; }
+.ev > summary::marker { content: ""; }
+
+.ev-time {
+  flex: none;
+  font-size: 11.5px;
+  font-weight: 800;
+  color: white;
+  background: var(--tone-deep);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+.ev-title { font-size: 14.5px; font-weight: 700; }
+.ev-note { font-size: 12.5px; color: var(--ink-soft); }
+
+.ev-tools { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 11px 11px; }
+.ev-tools form { display: flex; flex-wrap: wrap; gap: 7px; margin: 0; }
+.ev-tools form:first-child { flex: 1 1 260px; }
+
+.ev-add {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 0;
+}
+
+.ev-tools input, .ev-add input {
+  flex: 1 1 120px;
   min-width: 0;
   font-family: inherit;
-  font-size: 14.5px;
+  font-size: 13.5px;
   color: var(--ink);
-  padding: 10px 13px;
-  background: oklch(1 0 0 / 0.85);
+  padding: 8px 11px;
+  background: oklch(1 0 0 / 0.9);
   border: 1px solid var(--line);
-  border-radius: var(--r-sm);
+  border-radius: 10px;
   outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
 }
 
-.money-add input:focus, .money-add select:focus {
-  border-color: var(--coral);
-  box-shadow: 0 0 0 3px oklch(0.70 0.15 25 / 0.18);
+.ev-tools input:focus, .ev-add input:focus {
+  border-color: var(--tone);
+  box-shadow: 0 0 0 3px var(--tone-soft);
 }
 
-.money-import input { flex: 1 1 200px; padding: 9px 11px; font-size: 13px; }
+.ev-tools input[type="time"], .ev-add input[type="time"] { flex: 0 0 104px; }
 
-/* lịch sử */
-.money-history-title {
-  font-family: 'Quicksand', sans-serif;
-  color: white;
-  text-shadow: 0 2px 16px oklch(0.2 0.03 30 / 0.5);
-  font-size: 20px;
-  margin: 0 0 14px;
+.ev-tools button, .ev-add button {
+  font-size: 13.5px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, var(--tone), var(--tone-deep));
+  box-shadow: none;
 }
 
-.money-row {
-  background: var(--glass-strong);
-  border: 1px solid var(--glass-brd);
-  border-radius: var(--r-sm);
-  box-shadow: var(--shadow-sm);
-  backdrop-filter: blur(14px) saturate(1.2);
-  padding: 12px 16px;
-  margin-bottom: 10px;
-  display: grid;
-  grid-template-columns: 52px 1fr auto auto;
-  align-items: center;
-  gap: 14px;
+.ev-del {
+  padding: 8px 12px;
+  background: oklch(0.94 0.02 30);
+  color: var(--coral-deep);
 }
 
-.money-date {
-  font-family: 'Quicksand', sans-serif;
-  font-weight: 700;
-  font-size: 13px;
-  color: var(--ink-soft);
-}
+.ev-empty { margin: 2px 0 12px; font-size: 13.5px; color: var(--ink-soft); }
 
-.money-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
-
-.money-text b {
-  font-size: 15px;
-  font-weight: 800;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.money-text span { color: var(--ink-soft); font-size: 12.5px; }
-
-.money-amount {
-  font-family: 'Quicksand', sans-serif;
-  font-weight: 700;
-  font-size: 15.5px;
-  white-space: nowrap;
-}
-
-.money-amount.out { color: var(--coral-deep); }
-.money-amount.in  { color: oklch(0.52 0.13 150); }
-
-.money-row .actions { margin-top: 0; }
-
-@media (max-width: 820px) {
-  .money-tiles { grid-template-columns: 1fr 1fr; }
-  .money-charts, .money-forms { grid-template-columns: 1fr; }
-  .daybar small { display: none; }
+@media (max-width: 980px) {
+  .cal-board { grid-template-columns: 1fr; }
 }
 
 @media (max-width: 520px) {
-  .money-top form { width: 100%; }
-  .money-top select, .money-limit input { flex: 1 1 100%; }
-  .money-row {
-    grid-template-columns: 1fr auto;
-    grid-template-areas: "date act" "text text" "amt amt";
-    gap: 8px;
-  }
-  .money-date { grid-area: date; }
-  .money-text { grid-area: text; }
-  .money-amount { grid-area: amt; font-size: 17px; }
-  .money-row .actions { grid-area: act; }
-  .money-add input, .money-add select { flex: 1 1 100%; }
-  .money-add button, .money-import button { width: 100%; }
+  .cal-jump { margin-left: 0; flex: 1 1 100%; }
+  .cal-jump input { flex: 1 1 auto; min-width: 0; }
+  .cal-title { flex: 1 1 auto; min-width: 0; font-size: 19px; }
+  .cal { border-spacing: 2px; }
+  .cal-day { min-height: 40px; font-size: 13px; }
+  .ev-tools input, .ev-add input { flex: 1 1 100%; }
+  .ev-tools button, .ev-add button { width: 100%; }
+  .ev-del { width: auto; }
 }
 
 /* ---------- ĐĂNG NHẬP / LOGIN ---------- */
