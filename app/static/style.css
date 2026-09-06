@@ -669,7 +669,7 @@ button:active { transform: translateY(0); }
   .form-wrapper button { width: 100%; }
 }
 
-/* ---------- LỊCH / THỜI GIAN BIỂU ---------- */
+/* ---------- LỊCH / SCHEDULE ---------- */
 .cal-flash {
   background: var(--glass-strong);
   border: 1px solid var(--glass-brd);
@@ -682,7 +682,7 @@ button:active { transform: translateY(0); }
   font-size: 14.5px;
 }
 
-/* thanh chọn tuần */
+/* thanh chọn tháng */
 .cal-top {
   display: flex;
   flex-wrap: wrap;
@@ -693,44 +693,43 @@ button:active { transform: translateY(0); }
 
 .cal-title {
   font-family: 'Quicksand', sans-serif;
-  font-size: 21px;
+  font-size: 20px;
   font-weight: 700;
   margin: 0;
-  min-width: 160px;
+  min-width: 150px;
   text-align: center;
 }
 
 .cal-nav {
   display: grid;
   place-items: center;
-  width: 38px;
-  height: 38px;
+  width: 32px;
+  height: 32px;
   flex: none;
-  font-size: 22px;
+  font-size: 19px;
   line-height: 1;
-  color: var(--ink);
+  color: var(--coral-deep);
   text-decoration: none;
-  background: var(--glass-strong);
-  border: 1px solid var(--glass-brd);
+  background: oklch(1 0 0 / 0.6);
+  border: 1px solid var(--coral);
   border-radius: 50%;
-  box-shadow: var(--shadow-sm);
-  transition: transform 0.15s, color 0.15s;
+  transition: background 0.15s, transform 0.15s;
 }
 
-.cal-nav:hover { color: var(--coral-deep); transform: translateY(-2px); }
+.cal-nav:hover { background: oklch(1 0 0 / 0.95); transform: translateY(-1px); }
 
 .cal-today {
   font-size: 13.5px;
   font-weight: 700;
   color: var(--coral-deep);
   text-decoration: none;
-  padding: 8px 14px;
+  padding: 7px 16px;
   background: oklch(1 0 0 / 0.6);
-  border: 1px solid var(--glass-brd);
+  border: 1px solid var(--coral);
   border-radius: 999px;
 }
 
-.cal-today:hover { background: oklch(1 0 0 / 0.85); }
+.cal-today:hover { background: oklch(1 0 0 / 0.95); }
 
 .cal-jump { display: flex; gap: 8px; margin-left: auto; }
 
@@ -738,23 +737,23 @@ button:active { transform: translateY(0); }
   font-family: inherit;
   font-size: 14px;
   color: var(--ink);
-  padding: 9px 12px;
+  padding: 8px 12px;
   background: oklch(1 0 0 / 0.85);
   border: 1px solid var(--line);
   border-radius: var(--r-sm);
   outline: none;
 }
 
-.cal-jump button { font-size: 14px; padding: 9px 18px; }
+.cal-jump button { font-size: 14px; padding: 8px 16px; }
 
-/* ---------- một bảng tuần ---------- */
-.tt-card {
+/* ---------- một cuốn lịch: tháng bên trái, chi tiết bên phải ---------- */
+.cal-card {
   --tone: var(--coral);
   --tone-deep: var(--coral-deep);
   --tone-soft: oklch(0.70 0.15 25 / 0.12);
 
-  padding: 14px 14px 16px;
-  margin-bottom: 18px;
+  padding: 14px 16px 16px;
+  margin-bottom: 16px;
   background: var(--glass);
   border: 1px solid var(--glass-brd);
   border-radius: var(--r);
@@ -762,8 +761,8 @@ button:active { transform: translateY(0); }
   backdrop-filter: blur(18px) saturate(1.3);
 }
 
-/* Bảng thứ hai đổi tông màu — liếc một cái là biết đang xem lịch của ai. */
-.tt-card.two {
+/* Cuốn thứ hai đổi tông màu — liếc một cái là biết đang xem lịch của ai. */
+.cal-card.two {
   --tone: oklch(0.68 0.12 305);
   --tone-deep: oklch(0.56 0.14 310);
   --tone-soft: oklch(0.68 0.12 305 / 0.13);
@@ -773,26 +772,26 @@ button:active { transform: translateY(0); }
   display: flex;
   align-items: center;
   gap: 9px;
-  padding-bottom: 11px;
-  margin-bottom: 10px;
+  padding-bottom: 10px;
+  margin-bottom: 12px;
   border-bottom: 1px solid var(--line);
 }
 
 .cal-avatar {
   display: grid;
   place-items: center;
-  width: 30px;
-  height: 30px;
+  width: 28px;
+  height: 28px;
   flex: none;
   font-family: 'Quicksand', sans-serif;
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   color: white;
   background: linear-gradient(135deg, var(--tone), var(--tone-deep));
   border-radius: 50%;
 }
 
-.cal-owner b { font-size: 15.5px; font-weight: 800; }
+.cal-owner b { font-size: 15px; font-weight: 800; }
 
 .cal-owner small {
   font-size: 11px;
@@ -805,135 +804,186 @@ button:active { transform: translateY(0); }
 
 .cal-count { margin-left: auto; font-size: 12.5px; color: var(--ink-soft); }
 
-/* ---------- lưới giờ × ngày ---------- */
-.tt {
-  --hour-h: 46px;
-  --axis-w: 52px;
-
+.cal-split {
   display: grid;
-  grid-template-columns: var(--axis-w) repeat(7, minmax(0, 1fr));
-  grid-template-rows: auto calc(var(--hours) * var(--hour-h));
-  gap: 3px;
+  grid-template-columns: minmax(280px, 360px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
 }
 
-.tt-corner { border-radius: 10px; }
+/* ---------- lịch tháng gọn ---------- */
+.cal {
+  width: 100%;
+  table-layout: fixed;
+  border-collapse: collapse;
+}
 
-/* đầu cột: thứ + ngày, bấm vào là bung bảng chi tiết */
-.tt-head {
-  display: flex;
+.cal th {
+  padding: 0 0 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  color: var(--ink-soft);
+}
+
+.cal th.sun { color: var(--tone-deep); }
+.cal td { padding: 1px; text-align: center; }
+
+/* Một ô ngày: chỉ số ngày + một chấm nếu có việc. Là <button> nên phải ghi
+   đè nút mặc định (nền cam, chữ trắng, padding to). */
+.cal-day {
+  position: relative;
+  display: inline-flex;
   flex-direction: column;
   align-items: center;
-  gap: 1px;
-  padding: 6px 3px 7px;
+  justify-content: center;
+  gap: 2px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
   font-family: 'Nunito', system-ui, sans-serif;
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--ink-soft);
-  background: oklch(1 0 0 / 0.5);
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--ink);
+  background: none;
   border: 1px solid transparent;
-  border-radius: 10px;
+  border-radius: 50%;
   box-shadow: none;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition: background 0.12s, color 0.12s;
 }
 
-.tt-head:hover { background: oklch(1 0 0 / 0.9); transform: none; filter: none; }
-.tt-head b { font-size: 16px; font-weight: 800; color: var(--ink); line-height: 1.1; }
-.tt-head.today { border-color: var(--tone); }
-.tt-head.special { background: oklch(0.75 0.11 350 / 0.16); }
+.cal-day b { font-weight: 600; line-height: 1; }
+.cal-day:hover { background: var(--tone-soft); transform: none; filter: none; }
 
-.tt-head[aria-expanded="true"] {
-  background: linear-gradient(135deg, var(--tone), var(--tone-deep));
-  color: oklch(1 0 0 / 0.85);
+/* chấm báo "ngày này có việc" */
+.dot {
+  position: absolute;
+  bottom: 3px;
+  width: 4px;
+  height: 4px;
+  background: var(--gold);
+  border-radius: 50%;
+}
+
+.cal-day.today { color: var(--tone-deep); border-color: var(--tone); font-weight: 800; }
+.cal-day.special::after {
+  content: "♥";
+  position: absolute;
+  top: -2px;
+  right: 0;
+  font-size: 8px;
+  color: var(--rose);
+}
+
+.cal-day[aria-expanded="true"] {
+  color: white;
+  background: var(--tone-deep);
   border-color: transparent;
 }
 
-.tt-head[aria-expanded="true"] b { color: white; }
+.cal-day[aria-expanded="true"] b { font-weight: 800; }
+.cal-day[aria-expanded="true"] .dot { background: white; }
+.cal-day[aria-expanded="true"]::after { color: white; }
 
-.tt-heart { font-style: normal; font-size: 10px; color: var(--rose); line-height: 1; }
-.tt-head[aria-expanded="true"] .tt-heart { color: white; }
+/* Ngày của tháng bên cạnh: để trơ, bấm vào cũng không mở được. */
+.cal-day.out {
+  display: inline-grid;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  color: var(--ink-soft);
+  opacity: 0.32;
+  cursor: default;
+}
 
-/* việc cả ngày: chip nhỏ nằm ngay dưới số ngày */
-.tt-allday {
-  display: block;
-  max-width: 100%;
-  font-style: normal;
-  font-size: 10px;
+/* ---------- bảng chi tiết bên phải ---------- */
+.dt {
+  min-width: 0;
+  padding: 14px 16px 16px;
+  background: oklch(1 0 0 / 0.55);
+  border: 1px solid var(--glass-brd);
+  border-radius: var(--r-sm);
+}
+
+.dt-title {
+  margin: 0 0 12px;
+  font-family: 'Quicksand', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  text-align: center;
+  color: var(--ink);
+}
+
+.dt-body[hidden] { display: none; }
+.dt-body { animation: rise 0.2s ease both; }
+
+.dt-day {
+  margin: 0 0 10px;
+  font-family: 'Quicksand', sans-serif;
+  font-size: 13.5px;
   font-weight: 700;
   color: var(--tone-deep);
-  background: var(--tone-soft);
-  padding: 1px 5px;
-  margin-top: 2px;
-  border-radius: 5px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
-.tt-head[aria-expanded="true"] .tt-allday {
-  color: white;
-  background: oklch(1 0 0 / 0.25);
+.dt-day i { font-style: normal; font-size: 12px; color: oklch(0.48 0.11 350); }
+
+/* một việc — giờ bên trái, nội dung bên phải */
+.dt-item {
+  background: oklch(1 0 0 / 0.85);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  margin-bottom: 8px;
 }
 
-/* trục giờ dọc */
-.tt-axis, .sp-axis { position: relative; }
+.dt-item[open] { box-shadow: var(--shadow-sm); }
 
-.tt-axis span, .sp-axis span {
-  position: absolute;
-  right: 7px;
-  transform: translateY(-50%);
-  font-size: 10.5px;
+.dt-item > summary {
+  display: flex;
+  gap: 14px;
+  padding: 10px 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.dt-item > summary::-webkit-details-marker { display: none; }
+.dt-item > summary::marker { content: ""; }
+
+.dt-when {
+  display: flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  font-size: 12px;
   font-weight: 700;
   color: var(--ink-soft);
-  white-space: nowrap;
 }
 
-/* một cột ngày — vạch giờ vẽ bằng gradient, không tốn thẻ nào */
-.tt-col {
-  position: relative;
-  background:
-    repeating-linear-gradient(to bottom,
-      var(--line) 0 1px,
-      transparent 1px var(--hour-h)),
-    oklch(1 0 0 / 0.42);
-  border-radius: 10px;
+/* vạch nối giờ bắt đầu với giờ kết thúc */
+.dt-when i {
+  flex: 1 1 auto;
+  width: 1px;
+  min-height: 12px;
+  background: var(--line);
 }
 
-.tt-col.today { background-color: var(--tone-soft); box-shadow: inset 0 0 0 1px var(--tone); }
-.tt-col.special { background-color: oklch(0.75 0.11 350 / 0.12); }
+.dt-what { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
 
-/* một ô việc */
-.tt-block {
-  position: absolute;
-  box-sizing: border-box;
-  /* Viền trong suốt + background-clip: khe hở giữa hai làn việc trùng giờ,
-     mà không phải tính calc() cho từng ô. */
-  border: 1.5px solid transparent;
-  background-clip: padding-box;
-  overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  gap: 0;
-  min-height: 15px;
-  padding: 3px 5px;
-  font-family: 'Nunito', system-ui, sans-serif;
-  text-align: left;
-  color: white;
-  background: linear-gradient(135deg, var(--tone), var(--tone-deep));
-  border-radius: 7px;
-  box-shadow: 0 4px 10px -6px var(--tone-deep);
-  cursor: pointer;
-  transition: filter 0.15s;
+.dt-name {
+  font-size: 14px;
+  font-weight: 800;
+  color: var(--tone-deep);
+  line-height: 1.3;
 }
 
-.tt-block:hover { filter: brightness(1.08); transform: none; }
-.tt-block b { font-size: 11.5px; font-weight: 800; line-height: 1.25; }
-.tt-block small { font-size: 9.5px; opacity: 0.85; line-height: 1.2; }
+.dt-row { font-size: 12.5px; color: var(--ink); }
+.dt-row em { font-style: normal; color: var(--ink-soft); }
 
 /* ---------- NGÀY ĐẶC BIỆT: hai đường + phần nối ---------- */
 .sp {
-  padding: 14px 16px 16px;
-  margin-bottom: 18px;
+  padding: 13px 16px 15px;
+  margin-bottom: 16px;
   background: var(--glass-strong);
   border: 1px solid var(--glass-brd);
   border-left: 4px solid var(--rose);
@@ -947,13 +997,13 @@ button:active { transform: translateY(0); }
   flex-wrap: wrap;
   align-items: baseline;
   gap: 9px;
-  padding-bottom: 11px;
-  margin-bottom: 12px;
+  padding-bottom: 10px;
+  margin-bottom: 16px;
   border-bottom: 1px solid var(--line);
 }
 
-.sp-heart { font-size: 17px; color: var(--rose); }
-.sp-head > b { font-family: 'Quicksand', sans-serif; font-size: 16px; font-weight: 700; }
+.sp-heart { font-size: 16px; color: var(--rose); }
+.sp-head > b { font-family: 'Quicksand', sans-serif; font-size: 15px; font-weight: 700; }
 
 .sp-why {
   font-size: 12.5px;
@@ -964,16 +1014,28 @@ button:active { transform: translateY(0); }
   border-radius: 999px;
 }
 
-.sp-sum { margin-left: auto; font-size: 13px; color: var(--ink-soft); }
+.sp-sum { margin-left: auto; font-size: 12.5px; color: var(--ink-soft); }
 .sp-sum b { color: oklch(0.45 0.12 150); font-weight: 800; }
 
 .sp-body {
-  --hour-h: 40px;
+  --hour-h: 26px;
 
   display: grid;
-  grid-template-columns: 46px minmax(0, 1fr) 104px minmax(0, 1fr);
+  grid-template-columns: 42px minmax(0, 1fr) 78px minmax(0, 1fr);
   gap: 4px;
   height: calc(var(--hours) * var(--hour-h));
+}
+
+.sp-axis { position: relative; }
+
+.sp-axis span {
+  position: absolute;
+  right: 6px;
+  transform: translateY(-50%);
+  font-size: 9.5px;
+  font-weight: 700;
+  color: var(--ink-soft);
+  white-space: nowrap;
 }
 
 /* một đường thời gian */
@@ -986,18 +1048,18 @@ button:active { transform: translateY(0); }
     repeating-linear-gradient(to bottom,
       var(--line) 0 1px,
       transparent 1px var(--hour-h)),
-    oklch(1 0 0 / 0.42);
-  border-radius: 10px;
+    oklch(1 0 0 / 0.45);
+  border-radius: 8px;
 }
 
 .sp-line.two { --tone: oklch(0.68 0.12 305); --tone-deep: oklch(0.56 0.14 310); }
 
 .sp-who {
   position: absolute;
-  top: -1px;
+  top: -3px;
   left: 50%;
   transform: translate(-50%, -100%);
-  font-size: 11px;
+  font-size: 10.5px;
   font-weight: 800;
   color: var(--tone-deep);
 }
@@ -1008,16 +1070,14 @@ button:active { transform: translateY(0); }
   border: 1.5px solid transparent;
   background-clip: padding-box;
   overflow: hidden;
-  min-height: 15px;
-  padding: 3px 7px;
+  min-height: 13px;
+  padding: 1px 6px;
   color: white;
   background: linear-gradient(135deg, var(--tone), var(--tone-deep));
-  border-radius: 7px;
-  box-shadow: 0 4px 10px -6px var(--tone-deep);
+  border-radius: 6px;
 }
 
-.sp-block b { display: block; font-size: 11.5px; font-weight: 800; line-height: 1.25; }
-.sp-block small { font-size: 9.5px; opacity: 0.85; }
+.sp-block b { display: block; font-size: 10.5px; font-weight: 700; line-height: 1.3; }
 
 /* phần nối giữa hai đường */
 .sp-link { position: relative; }
@@ -1028,7 +1088,7 @@ button:active { transform: translateY(0); }
   right: 0;
   display: grid;
   place-items: center;
-  border-radius: 8px;
+  border-radius: 7px;
 }
 
 /* Rảnh cùng nhau: nối hẳn hai bên bằng một dải liền, vì đó là thứ đáng nhìn
@@ -1039,7 +1099,7 @@ button:active { transform: translateY(0); }
   border-bottom: 1px dashed oklch(0.55 0.13 150 / 0.6);
 }
 
-.sp-band.free span { font-size: 13px; color: oklch(0.45 0.13 150); }
+.sp-band.free span { font-size: 12px; color: oklch(0.45 0.13 150); }
 
 .sp-band.busy {
   background: repeating-linear-gradient(135deg,
@@ -1047,12 +1107,12 @@ button:active { transform: translateY(0); }
     transparent 5px 10px);
 }
 
-.sp-band.busy span { font-size: 10px; color: var(--ink-soft); opacity: 0.7; }
+.sp-band.busy span { font-size: 9px; color: var(--ink-soft); opacity: 0.7; }
 
-.sp-note { display: flex; flex-wrap: wrap; gap: 7px; margin: 14px 0 0; }
+.sp-note { display: flex; flex-wrap: wrap; gap: 7px; margin: 12px 0 0; }
 
 .sp-slot {
-  font-size: 12.5px;
+  font-size: 12px;
   font-weight: 700;
   color: oklch(0.42 0.12 150);
   background: oklch(0.74 0.13 150 / 0.18);
@@ -1060,94 +1120,32 @@ button:active { transform: translateY(0); }
   border-radius: 999px;
 }
 
-/* ---------- bảng chi tiết một ngày ---------- */
-.tt-panels { margin-top: 12px; }
-
-.day-panel[hidden] { display: none; }
-
-.day-panel {
-  padding: 13px 15px 14px;
-  background: oklch(1 0 0 / 0.66);
-  border: 1px solid var(--glass-brd);
-  border-left: 3px solid var(--tone);
-  border-radius: var(--r-sm);
-  animation: rise 0.22s ease both;
-}
-
-.day-panel h4 {
-  margin: 0 0 10px;
-  font-family: 'Quicksand', sans-serif;
-  font-size: 14.5px;
-  font-weight: 700;
-  color: var(--tone-deep);
-}
-
-.day-panel h4 i {
-  font-style: normal;
-  font-size: 12.5px;
-  color: oklch(0.48 0.11 350);
-}
-
-.ev-list { display: flex; flex-direction: column; gap: 7px; margin-bottom: 12px; }
-
-.ev {
-  background: oklch(1 0 0 / 0.8);
-  border: 1px solid var(--line);
-  border-radius: 12px;
-}
-
-.ev[open] { box-shadow: var(--shadow-sm); }
-
-.ev > summary {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 8px;
-  padding: 8px 11px;
-  cursor: pointer;
-  list-style: none;
-}
-
-.ev > summary::-webkit-details-marker { display: none; }
-.ev > summary::marker { content: ""; }
-
-.ev-time {
-  flex: none;
-  font-size: 11.5px;
-  font-weight: 800;
-  color: white;
-  background: var(--tone-deep);
-  padding: 2px 8px;
-  border-radius: 999px;
-}
-
-.ev-title { font-size: 14.5px; font-weight: 700; }
-.ev-note { font-size: 12.5px; color: var(--ink-soft); }
-
-.ev-tools { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 11px 11px; }
-.ev-tools form { display: flex; flex-wrap: wrap; gap: 7px; margin: 0; }
-.ev-tools form:first-child { flex: 1 1 300px; }
+/* ---------- sửa / thêm / đánh dấu ---------- */
+.ev-tools { display: flex; flex-wrap: wrap; gap: 7px; padding: 0 12px 11px; }
+.ev-tools form { display: flex; flex-wrap: wrap; gap: 6px; margin: 0; }
+.ev-tools form:first-child { flex: 1 1 260px; }
 
 .ev-add, .sp-mark {
   display: flex;
   flex-wrap: wrap;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
   margin: 0;
 }
 
-.sp-mark { margin-top: 11px; padding-top: 11px; border-top: 1px solid var(--line); }
+.ev-add { margin-top: 12px; }
+.sp-mark { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
 
 .ev-tools input, .ev-add input, .sp-mark input {
-  flex: 1 1 120px;
+  flex: 1 1 110px;
   min-width: 0;
   font-family: inherit;
-  font-size: 13.5px;
+  font-size: 13px;
   color: var(--ink);
-  padding: 8px 11px;
+  padding: 7px 10px;
   background: oklch(1 0 0 / 0.9);
   border: 1px solid var(--line);
-  border-radius: 10px;
+  border-radius: 9px;
   outline: none;
   transition: border-color 0.15s, box-shadow 0.15s;
 }
@@ -1157,20 +1155,16 @@ button:active { transform: translateY(0); }
   box-shadow: 0 0 0 3px var(--tone-soft);
 }
 
-.ev-tools input[type="time"], .ev-add input[type="time"] { flex: 0 0 104px; }
+.ev-tools input[type="time"], .ev-add input[type="time"] { flex: 0 0 98px; }
 
 .ev-tools button, .ev-add button, .sp-mark button {
-  font-size: 13.5px;
-  padding: 8px 16px;
+  font-size: 13px;
+  padding: 7px 15px;
   background: linear-gradient(135deg, var(--tone), var(--tone-deep));
   box-shadow: none;
 }
 
-.ev-del {
-  padding: 8px 12px;
-  background: oklch(0.94 0.02 30);
-  color: var(--coral-deep);
-}
+.ev-del { padding: 7px 11px; background: oklch(0.94 0.02 30); color: var(--coral-deep); }
 
 .sp-mark button {
   background: linear-gradient(135deg, oklch(0.78 0.10 350), oklch(0.66 0.13 350));
@@ -1178,25 +1172,20 @@ button:active { transform: translateY(0); }
 
 .sp-mark .sp-off { background: oklch(0.94 0.02 350); color: oklch(0.48 0.11 350); }
 
-.ev-empty { margin: 2px 0 12px; font-size: 13.5px; color: var(--ink-soft); }
+.ev-empty { margin: 2px 0; font-size: 13px; color: var(--ink-soft); }
 
-@media (max-width: 820px) {
-  .tt { --hour-h: 40px; --axis-w: 42px; gap: 2px; }
-  .tt-head { font-size: 10px; }
-  .tt-head b { font-size: 14px; }
-  .tt-allday { display: none; }
-  .tt-block b { font-size: 10px; }
-  .tt-block small { display: none; }
-  .sp-body { grid-template-columns: 40px minmax(0, 1fr) 62px minmax(0, 1fr); }
+@media (max-width: 900px) {
+  .cal-split { grid-template-columns: 1fr; }
+  .cal { max-width: 340px; margin: 0 auto; }
+  .sp-body { --hour-h: 24px; grid-template-columns: 36px minmax(0, 1fr) 52px minmax(0, 1fr); }
   .sp-sum { margin-left: 0; flex: 1 1 100%; }
 }
 
 @media (max-width: 520px) {
   .cal-jump { margin-left: 0; flex: 1 1 100%; }
   .cal-jump input { flex: 1 1 auto; min-width: 0; }
-  .cal-title { flex: 1 1 auto; min-width: 0; font-size: 19px; }
-  .tt { --hour-h: 34px; --axis-w: 34px; }
-  .tt-axis span, .sp-axis span { right: 3px; font-size: 9px; }
+  .cal-title { flex: 1 1 auto; min-width: 0; font-size: 18px; }
+  .cal-day, .cal-day.out { width: 30px; height: 30px; font-size: 12.5px; }
   .ev-tools input, .ev-add input, .sp-mark input { flex: 1 1 100%; }
   .ev-tools button, .ev-add button, .sp-mark button { width: 100%; }
   .ev-del { width: auto; }

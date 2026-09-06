@@ -201,27 +201,13 @@ def test_gio_ket_thuc_khong_tran_sang_ngay_hom_sau(db):
     assert muc.end == "23:59"
 
 
-def test_thu_hai_cua_tuan(db):
-    # 2025-03-14 la thu 6
-    assert crud.monday_of("2025-03-14") == "2025-03-10"
-    assert crud.monday_of("2025-03-10") == "2025-03-10"
-    assert crud.monday_of("2025-03-16") == "2025-03-10"      # chu nhat van thuoc tuan do
+def test_chi_lay_viec_trong_khoang_ngay(db):
+    crud.create_event(db, MEMBER, "2025-03-14", "Trong tháng", "08:00")
+    crud.create_event(db, MEMBER, "2025-04-02", "Tháng sau", "08:00")
 
+    trong_thang = crud.get_events(db, "2025-03-01", "2025-03-31")
 
-def test_bay_ngay_cua_tuan(db):
-    days = crud.week_days("2025-03-14")
-
-    assert days[0] == "2025-03-10" and days[-1] == "2025-03-16"
-    assert len(days) == 7
-
-
-def test_chi_lay_viec_trong_tuan(db):
-    crud.create_event(db, MEMBER, "2025-03-14", "Trong tuần", "08:00")
-    crud.create_event(db, MEMBER, "2025-03-20", "Tuần sau", "08:00")
-
-    trong_tuan = crud.get_week_events(db, "2025-03-10")
-
-    assert [e.title for e in trong_tuan] == ["Trong tuần"]
+    assert [e.title for e in trong_thang] == ["Trong tháng"]
 
 
 def test_lich_xep_theo_ngay_roi_theo_gio(db):
@@ -230,7 +216,7 @@ def test_lich_xep_theo_ngay_roi_theo_gio(db):
     crud.create_event(db, MEMBER, "2025-03-14", "Sáng", "07:00")
     crud.create_event(db, MEMBER, "2025-03-14", "Cả ngày")
 
-    assert [e.title for e in crud.get_week_events(db, "2025-03-10")] == \
+    assert [e.title for e in crud.get_events(db, "2025-03-01", "2025-03-31")] == \
            ["Cả ngày", "Sáng", "Chiều", "Trưa"]
 
 
@@ -238,7 +224,7 @@ def test_loc_theo_chu_lich(db):
     crud.create_event(db, MEMBER, "2025-03-14", "Của mình", "08:00")
     crud.create_event(db, ADMIN, "2025-03-14", "Của người kia", "08:00")
 
-    cua_toi = crud.get_week_events(db, "2025-03-10", owner=MEMBER)
+    cua_toi = crud.get_events(db, "2025-03-01", "2025-03-31", owner=MEMBER)
 
     assert [e.title for e in cua_toi] == ["Của mình"]
 
@@ -246,12 +232,12 @@ def test_loc_theo_chu_lich(db):
 def test_khong_them_duoc_vao_lich_nguoi_la(db):
     """Gõ sai tên mà lẳng lặng nhét sang lịch người kia thì tai hại hơn là báo lỗi."""
     assert crud.create_event(db, "nguoi-la", "2025-03-14", "Việc") is None
-    assert crud.get_week_events(db, "2025-03-10") == []
+    assert crud.get_events(db, "2025-03-01", "2025-03-31") == []
 
 
 def test_khong_them_duoc_muc_khong_co_ten(db):
     assert crud.create_event(db, MEMBER, "2025-03-14", "   ") is None
-    assert crud.get_week_events(db, "2025-03-10") == []
+    assert crud.get_events(db, "2025-03-01", "2025-03-31") == []
 
 
 def test_sua_mot_muc_trong_lich(db):
@@ -274,7 +260,7 @@ def test_xoa_mot_muc(db):
     muc = crud.create_event(db, MEMBER, "2025-03-14", "Việc", "08:00")
 
     assert crud.delete_event(db, muc.id) is True
-    assert crud.get_week_events(db, "2025-03-10") == []
+    assert crud.get_events(db, "2025-03-01", "2025-03-31") == []
 
 
 # ---------- NGÀY ĐẶC BIỆT ----------

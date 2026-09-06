@@ -1,6 +1,11 @@
-"""Thời gian biểu — mỗi đứa một bảng tuần, ngày ♥ thì ghép hai bên lại."""
+"""Lịch — mỗi đứa một tháng gọn, bấm vào ngày thì xem chi tiết ở bên cạnh.
 
-from datetime import date as date_cls, timedelta
+Ngày ♥ vẫn được vẽ thành hai đường thời gian đặt cạnh nhau, vì đó là chỗ duy
+nhất cần nhìn theo giờ: để thấy hai đứa rảnh trùng nhau lúc nào.
+"""
+
+import calendar
+from datetime import date as date_cls
 from urllib.parse import quote
 
 from fastapi import APIRouter, Depends, Form, Request
@@ -17,8 +22,9 @@ router = APIRouter()
 WEEKDAYS = ("T2", "T3", "T4", "T5", "T6", "T7", "CN")
 DAY_NAMES = ("Thứ 2", "Thứ 3", "Thứ 4", "Thứ 5", "Thứ 6", "Thứ 7", "Chủ nhật")
 
-# Khung giờ luôn hiện, kể cả tuần trống. Có việc sớm hơn / muộn hơn thì khung
-# tự nới ra vừa đủ, chứ không kéo dài 00:00-24:00 làm bảng cao vô ích.
+_cal = calendar.Calendar(firstweekday=calendar.MONDAY)
+
+# Khung giờ của hai đường ngày ♥. Có việc sớm/muộn hơn thì tự nới ra vừa đủ.
 DAY_START = 7 * 60
 DAY_END = 22 * 60
 
@@ -27,12 +33,12 @@ DAY_END = 22 * 60
 FREE_MINUTES = 45
 
 
-def _back(monday: str = "", open_key: str = "", msg: str = "") -> RedirectResponse:
-    """Về lại /schedule, giữ nguyên tuần và mở lại đúng ngày vừa thao tác."""
+def _back(month: str = "", open_key: str = "", msg: str = "") -> RedirectResponse:
+    """Về lại /schedule, giữ nguyên tháng và mở lại đúng ngày vừa thao tác."""
     parts = []
 
-    if monday:
-        parts.append(f"week={quote(monday)}")
+    if month:
+        parts.append(f"month={quote(month)}")
     if open_key:
         parts.append(f"open={quote(open_key)}")
     if msg:
@@ -42,9 +48,14 @@ def _back(monday: str = "", open_key: str = "", msg: str = "") -> RedirectRespon
                             status_code=303)
 
 
-def _shift(monday: str, weeks: int) -> str:
-    day = date_cls.fromisoformat(monday) + timedelta(weeks=weeks)
-    return day.isoformat()
+def _shift(month: str, delta: int) -> str:
+    """Tháng liền trước / liền sau, dạng YYYY-MM."""
+    year, mon = int(month[:4]), int(month[5:7]) + delta
+
+    year += (mon - 1) // 12
+    mon = (mon - 1) % 12 + 1
+
+    return f"{year:04d}-{mon:02d}"
 
 
 def _label(iso: str) -> str:
@@ -52,8 +63,77 @@ def _label(iso: str) -> str:
     return f"{DAY_NAMES[day.weekday()]}, {day.day:02d}/{day.month:02d}"
 
 
+def _weeks(month: str, per_day: dict, specials: set, today: str) -> list:
+    """Lưới tháng: các tuần × 7 ngày, mỗi ô chỉ cần biết có việc hay không.
+
+    Ô của tháng khác (phần đệm đầu/cuối lưới) để trơ: bấm vào thêm việc ở đó
+    thì thêm xong lại không thấy nó đâu, vì đã sang tháng khác mất rồi.
+    """
+    year, mon = int(month[:4]), int(month[5:7])
+
+    return [[{
+        "date": day.isoformat(),
+        "day": day.day,
+        "in_month": day.month == mon,
+        "today": day.isoformat() == today,
+        "special": day.isoformat() in specials,
+        "count": len(per_day.get(day.isoformat(), ())) if day.month == mon else 0,
+    } for day in week] for week in _cal.monthdatescalendar(year, mon)]
+
+
+def _month_days(month: str) -> list:
+    """Các ngày thuộc đúng tháng này, theo thứ tự."""
+    year, mon = int(month[:4]), int(month[5:7])
+    last = calendar.monthrange(year, mon)[1]
+
+    return [f"{month}-{d:02d}" for d in range(1, last + 1)]
+
+
+def _pick(month: str, open_key: str, owner: str, today: str) -> str:
+    """Ngày đang mở ở bảng chi tiết của một người.
+
+    Bảng bên phải lúc nào cũng có nội dung, nên phải chọn sẵn một ngày: ngày vừa
+    thao tác nếu có, không thì hôm nay, không thì ngày đầu tháng.
+    """
+    if open_key.startswith(f"{owner}:"):
+        wanted = open_key.split(":", 1)[1]
+        if wanted.startswith(month):
+            return wanted
+
+    return today if today.startswith(month) else f"{month}-01"
+
+
+def _spell(total: int) -> str:
+    """90 -> "1 tiếng 30 phút" — đọc nhanh hơn là "90 phút"."""
+    if total <= 0:
+        return "không có lúc nào"
+
+    hours, mins = divmod(total, 60)
+    parts = ([f"{hours} tiếng"] if hours else []) + ([f"{mins} phút"] if mins else [])
+
+    return " ".join(parts)
+
+
+def _items(events) -> list:
+    """Việc của một ngày, việc cả ngày lên đầu rồi mới đến việc có giờ.
+
+    Kèm sẵn độ dài: cột giờ bên trái đã nói bắt đầu/kết thúc rồi, nên nhắc lại
+    y hệt trong phần mô tả thì tốn chỗ mà không thêm gì.
+    """
+    return [{
+        "id": e.id,
+        "title": e.title,
+        "note": e.note,
+        "start": e.start,
+        "end": e.end,
+        "length": _spell(crud.minutes(e.end) - crud.minutes(e.start)) if e.start else "",
+    } for e in events]
+
+
+# ---------- ngày ♥: hai đường thời gian + phần nối ----------
+
 def _window(events) -> tuple:
-    """Khung giờ hiển thị, nới ra vừa đủ ôm hết việc của tuần."""
+    """Khung giờ của một ngày, nới ra vừa đủ ôm hết việc của ngày đó."""
     timed = [e for e in events if e.start]
 
     low = min([crud.minutes(e.start) for e in timed] + [DAY_START])
@@ -105,32 +185,13 @@ def _blocks(events, top: int, bottom: int) -> list:
     return [{
         "id": e.id,
         "title": e.title,
-        "note": e.note,
         "start": e.start,
         "end": e.end,
-        "date": e.date,
-        "owner": e.owner,
         "offset": (crud.minutes(e.start) - top) / span * 100,
         "height": (crud.minutes(e.end) - crud.minutes(e.start)) / span * 100,
         "left": lane / total * 100,
         "width": 100 / total,
     } for e, lane, total in _lanes([e for e in events if e.start])]
-
-
-def _grid(events, days, top, bottom) -> list:
-    """Bảy cột ngày, mỗi cột là các ô việc + phần việc cả ngày ở trên đầu."""
-    today = date_cls.today().isoformat()
-
-    return [{
-        "date": day,
-        "weekday": WEEKDAYS[i],
-        "day": int(day[8:10]),
-        "month": int(day[5:7]),
-        "today": day == today,
-        "label": _label(day),
-        "allday": [e for e in events if e.date == day and not e.start],
-        "blocks": _blocks([e for e in events if e.date == day], top, bottom),
-    } for i, day in enumerate(days)]
 
 
 def _busy(events) -> list:
@@ -182,19 +243,8 @@ def _overlap(left, right) -> list:
     return out
 
 
-def _spell(total: int) -> str:
-    """90 -> "1 tiếng 30 phút" — đọc nhanh hơn là "90 phút"."""
-    if total <= 0:
-        return "không có lúc nào"
-
-    hours, mins = divmod(total, 60)
-    parts = ([f"{hours} tiếng"] if hours else []) + ([f"{mins} phút"] if mins else [])
-
-    return " ".join(parts)
-
-
-def _connection(events_by_owner, owners, top, bottom) -> dict:
-    """Phần nối giữa hai thời gian biểu của một ngày ♥.
+def _connection(sides, top, bottom) -> dict:
+    """Phần nối giữa hai đường thời gian của một ngày ♥.
 
     Hai thứ đáng nhìn nhất khi so lịch hai đứa với nhau:
       - *rảnh cùng nhau*: cả hai đều trống, đủ dài để rủ nhau đi đâu đó;
@@ -208,12 +258,11 @@ def _connection(events_by_owner, owners, top, bottom) -> dict:
             "label": label,
             "from": crud.hhmm(a),
             "to": crud.hhmm(b),
-            "minutes": b - a,
             "offset": (a - top) / span * 100,
             "height": (b - a) / span * 100,
         } for a, b in pairs]
 
-    busy = [_busy(events_by_owner.get(o, [])) for o in owners]
+    busy = [_busy(side) for side in sides]
     free = [_free(b, top, bottom) for b in busy]
 
     together = [p for p in _overlap(free[0], free[1]) if p[1] - p[0] >= FREE_MINUTES]
@@ -247,67 +296,78 @@ def _hours(top: int, bottom: int) -> list:
 
 
 @router.get("/schedule")
-def schedule_page(request: Request, week: str = "", open: str = "", msg: str = "",
+def schedule_page(request: Request, month: str = "", open: str = "", msg: str = "",
                   db: Session = Depends(get_db)):
-    # monday_of đi qua valid_date, nên ?week=lung-tung rơi về tuần này thay vì
-    # làm vỡ cả trang ở date.fromisoformat.
-    monday = crud.monday_of(week or date_cls.today().isoformat())
-    days = crud.week_days(monday)
+    # valid_month chặn luôn ?month=lung-tung — nếu không, _weeks vỡ ở
+    # int(month[:4]) và cả trang thành 500.
+    month = crud.valid_month(month or date_cls.today().strftime("%Y-%m"))
+    today = date_cls.today().isoformat()
+    days = _month_days(month)
 
     owners = crud.people()
-    events = crud.get_week_events(db, monday)
+    events = crud.get_events(db, days[0], days[-1])
     specials = crud.get_special_days(db, days[0], days[-1])
+    special_dates = {s.date for s in specials}
 
-    top, bottom = _window(events)
-
-    by_owner = {}
+    # (chủ lịch, ngày) -> việc, dựng một lần rồi dùng lại cho cả lưới lẫn bảng
+    # chi tiết — thay vì lọc lại danh sách ở từng ô.
+    per_owner_day = {}
     for event in events:
-        by_owner.setdefault(event.owner, []).append(event)
+        per_owner_day.setdefault((event.owner, event.date), []).append(event)
 
-    boards = [{
-        "owner": owner,
-        "days": _grid(by_owner.get(owner, []), days, top, bottom),
-        "count": len(by_owner.get(owner, [])),
-        "me": request.state.user and request.state.user["username"] == owner,
-    } for owner in owners]
+    open_key = crud.clean(open, 80)
+
+    boards = []
+    for owner in owners:
+        per_day = {d: v for (o, d), v in per_owner_day.items() if o == owner}
+        chosen = _pick(month, open_key, owner, today)
+
+        boards.append({
+            "owner": owner,
+            "me": request.state.user and request.state.user["username"] == owner,
+            "count": sum(len(v) for v in per_day.values()),
+            "weeks": _weeks(month, per_day, special_dates, today),
+            "chosen": chosen,
+            "panels": [{
+                "date": day,
+                "label": _label(day),
+                "special": next((s.title for s in specials if s.date == day), None),
+                # KHÔNG đặt tên khoá này là "items": trong template Jinja sẽ
+                # hiểu p.items là phương thức dict.items chứ không phải dữ liệu.
+                "events": _items(per_day.get(day, [])),
+            } for day in days],
+        })
 
     # Ngày ♥: hai đường thời gian đặt cạnh nhau, ở giữa là phần nối.
     special_days = []
     for special in specials:
-        same_day = {o: [e for e in by_owner.get(o, []) if e.date == special.date]
-                    for o in owners}
+        sides = [per_owner_day.get((o, special.date), []) for o in owners]
+        top, bottom = _window([e for side in sides for e in side])
 
         special_days.append({
             "date": special.date,
             "title": special.title,
             "label": _label(special.date),
+            "hours": _hours(top, bottom),
             "lines": [{
                 "owner": owner,
-                "allday": [e for e in same_day[owner] if not e.start],
-                "blocks": _blocks(same_day[owner], top, bottom),
-            } for owner in owners],
-            "link": _connection(same_day, owners, top, bottom)
-                    if len(owners) == 2 else _connection({}, ["", ""], top, bottom),
+                "blocks": _blocks(sides[i], top, bottom),
+            } for i, owner in enumerate(owners)],
+            "link": _connection(sides if len(owners) == 2 else [[], []], top, bottom),
         })
 
     return templates.TemplateResponse(request, "schedule.html", {
         "bg": "bgfood.mp4",
-        "monday": monday,
-        "days": days,
-        "week_label": f"{days[0][8:10]}/{days[0][5:7]} – {days[-1][8:10]}/{days[-1][5:7]}"
-                      f"/{days[-1][:4]}",
-        "prev_week": _shift(monday, -1),
-        "next_week": _shift(monday, 1),
-        "this_week": crud.monday_of(date_cls.today().isoformat()),
-        "today": date_cls.today().isoformat(),
+        "month": month,
+        "month_label": f"Tháng {int(month[5:7])}, {month[:4]}",
+        "prev_month": _shift(month, -1),
+        "next_month": _shift(month, 1),
+        "this_month": date_cls.today().strftime("%Y-%m"),
+        "today": today,
         "weekdays": WEEKDAYS,
         "boards": boards,
         "special_days": special_days,
-        "special_dates": {s.date for s in specials},
-        "specials_by_date": {s.date: s.title for s in specials},
-        "hours": _hours(top, bottom),
-        # "chủ lịch:ngày" của ô đang mở — giữ ô mở qua mỗi lần submit form
-        "open_key": crud.clean(open, 80),
+        "open_key": open_key,
         "msg": crud.clean(msg, 200),
     })
 
@@ -325,10 +385,10 @@ def add_event(owner: str = Form(...),
     event = crud.create_event(db, owner, date, title, start, end, note)
 
     if not event:
-        return _back(crud.monday_of(date), f"{owner}:{date}",
+        return _back(date[:7], f"{owner}:{date}",
                      "Cần tên lịch có thật và một tiêu đề nha")
 
-    return _back(crud.monday_of(event.date), f"{event.owner}:{event.date}")
+    return _back(event.date[:7], f"{event.owner}:{event.date}")
 
 
 @router.post("/schedule/edit/{id}")
@@ -344,24 +404,23 @@ def edit_event(id: int,
     if not item:
         return _back(msg="Việc này không còn nữa")
 
-    key, monday = f"{item.owner}:{item.date}", crud.monday_of(item.date)
+    key, month = f"{item.owner}:{item.date}", item.date[:7]
 
     if not crud.update_event(db, id, title, start, end, note):
-        return _back(monday, key, "Tiêu đề không được để trống")
+        return _back(month, key, "Tiêu đề không được để trống")
 
-    return _back(monday, key)
+    return _back(month, key)
 
 
 # POST chứ không phải GET — xem ghi chú ở app/routes/food.py
 @router.post("/schedule/delete/{id}")
 def delete_event(id: int, db: Session = Depends(get_db)):
     item = crud.get_event(db, id)
-    key, monday = ((f"{item.owner}:{item.date}", crud.monday_of(item.date))
-                   if item else ("", ""))
+    key, month = (f"{item.owner}:{item.date}", item.date[:7]) if item else ("", "")
 
     crud.delete_event(db, id)
 
-    return _back(monday, key)
+    return _back(month, key)
 
 
 @router.post("/schedule/special")
@@ -371,4 +430,4 @@ def toggle_special(date: str = Form(""), title: str = Form(""),
     date = crud.valid_date(date)
     crud.toggle_special_day(db, date, title)
 
-    return _back(crud.monday_of(date))
+    return _back(date[:7], f"{crud.people()[0]}:{date}" if crud.people() else "")

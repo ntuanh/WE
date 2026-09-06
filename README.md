@@ -7,7 +7,7 @@ A lightweight, fast, and responsive web application built with Python and FastAP
 * **Food Board:** A drag-and-drop kanban across three columns (Đã ăn / Chưa ăn / Muốn ăn), with photo thumbnails, a 0–5 star rating, and a one-tap Google Maps link per place.
 * **Study Management:** Keep track of your study spots and edit them in place.
 * **Daily Planning:** A todo list with priority badges, deadlines, and tick-to-complete.
-* **Shared Timetable:** A weekly hour-by-hour timetable per account, plus ♥ special days that put both people's timelines side by side and draw the connection between them — the windows where you are *both* free, and the hours you are both booked.
+* **Shared Calendar:** A compact month calendar per account — a day with anything on it just gets a dot, and clicking it shows that day beside the grid. ♥ special days get the full treatment: both people's timelines side by side with the connection drawn between them — the windows where you are *both* free, and the hours you are both booked.
 * **Login Gate:** Every page sits behind a username/password form — two accounts, one of them admin. Passwords are PBKDF2 hashes, the session is an HMAC-signed cookie, and repeated wrong guesses lock the account out for a while.
 * **Glass Aesthetic:** Frosted-glass panels over a full-bleed video background, with a warm oklch palette and responsive breakpoints down to mobile.
 * **Interactive UI:** Background videos for an immersive experience, and an auto-highlighting nav bar.
@@ -161,7 +161,7 @@ pip install -r requirements-dev.txt
 pytest
 ```
 
-218 tests, no network and no touching `we.db` — `tests/conftest.py` points the
+217 tests, no network and no touching `we.db` — `tests/conftest.py` points the
 app at an in-memory SQLite before importing it, and swaps in throwaway accounts
 so the real password hashes are never needed.
 
@@ -172,35 +172,34 @@ so the real password hashes are never needed.
 | `tests/test_crud.py` | input cleaning and validation, time parsing, week maths, calendar ownership rules |
 | `tests/test_routes.py` | each page and form end-to-end over HTTP |
 
-## 🗓 Shared timetable
+## 🗓 Shared calendar
 
-`/schedule` gives each account its own week timetable — hours down the side,
-Mon–Sun across, entries drawn as blocks against the clock. The accounts come from
-`auth.USERS`, so nobody's name is hard-coded and the page follows whatever two
-logins exist.
+`/schedule` gives each account a compact month grid with the day's detail beside
+it. The accounts come from `auth.USERS`, so nobody's name is hard-coded and the
+page follows whatever two logins exist.
 
-The hour window is not fixed at 00:00–24:00, which would leave most of the grid
-empty. It defaults to 07:00–22:00 and stretches only as far as the week's earliest
-and latest entry actually reach.
+The grid itself stays deliberately plain: a day carries **one dot** if anything is
+on it, a ♥ if it is a special day, and nothing else. Titles and times live in the
+panel to the right, which shows one day at a time — the day you last touched,
+otherwise today, otherwise the 1st. Each entry there reads as a time column
+(start, connector, end) next to its title, duration and note, and expands into an
+edit form in place.
 
-Entries that overlap are split into lanes and drawn side by side. Without that the
-later one renders on top of the earlier and hides it completely, which looks exactly
-like the entry was never saved.
-
-Clicking a day header — or any block in it — expands that day's panel below the
-grid to read, add, edit or delete. The panel is rendered server-side and hidden,
-the script only flips `hidden`, and a submit redirects back with
-`?open=<account>:<date>` so the day you were working on is still open when the
-page comes back. Clicking a block also opens that entry's edit form directly.
+Every day's panel is rendered server-side and hidden; the script only flips
+`hidden`, and a submit redirects back with `?open=<account>:<date>` so the day you
+were working on is still selected when the page comes back. Clicking a day
+*switches* the panel rather than toggling it, so the right-hand side is never
+empty.
 
 ### ♥ Special days and the connection between them
 
 Any day can be marked ♥ with a reason ("Kỷ niệm 2 năm"). A special day is shared,
 not per-person — `special_days` has no `owner` column, so marking it from either
-timetable marks it for both.
+calendar marks it for both.
 
-Special days get pinned above the week as **two timelines on one hour axis**, one
-person per side, with the connection drawn down the middle:
+This is the one place the page draws an hour axis, because it is the one place
+that needs one. A special day is pinned above the calendars as **two timelines on
+one axis**, one person per side, with the connection down the middle:
 
 * **♥ rảnh cùng nhau** — a solid band wherever *both* calendars are empty, so the
   windows you could actually spend together are the most visible thing on the page.
@@ -211,14 +210,15 @@ person per side, with the connection drawn down the middle:
 Both are computed as interval intersections: merge each person's entries into busy
 spans, take the complement for free spans, then intersect the two sides. A summary
 line adds up each ("Rảnh cùng nhau 9 tiếng"), and the free windows repeat as chips
-under the timelines.
+under the timelines. Entries that overlap are split into lanes and drawn side by
+side — without that the later one covers the earlier completely.
 
 Entries store an optional `HH:MM` start and end. Leaving the start empty makes it
-an all-day entry, shown as a chip in the day header rather than a block on the
-axis. An end at or before the start is a typo, so it is pushed to start + 1 hour —
-left alone it would render a block with negative height and break the grid. An
-entry can only be filed under an account that exists: a bad `owner` is rejected
-outright rather than quietly landing on the other person's timetable.
+an all-day entry, sorted to the top of its day. An end at or before the start is a
+typo, so it is pushed to start + 1 hour — left alone it would render a block with
+negative height. An entry can only be filed under an account that exists: a bad
+`owner` is rejected outright rather than quietly landing on the other person's
+calendar.
 
 ## 🔐 Accounts & passwords
 

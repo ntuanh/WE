@@ -5,7 +5,7 @@ còn việc *làm sạch và kiểm tra* là ở đây — nhờ vậy không c�
 được, kể cả khi sau này thêm route mới.
 """
 
-from datetime import date as date_cls, time as time_cls, timedelta
+from datetime import date as date_cls, time as time_cls
 
 from sqlalchemy.orm import Session
 
@@ -274,18 +274,6 @@ def _span(start: str, end: str) -> tuple:
     return start, end
 
 
-def monday_of(value) -> str:
-    """Thứ 2 của tuần chứa ngày này, dạng YYYY-MM-DD."""
-    day = date_cls.fromisoformat(valid_date(value))
-    return (day - timedelta(days=day.weekday())).isoformat()
-
-
-def week_days(monday: str) -> list:
-    """Bảy ngày của tuần bắt đầu từ `monday`."""
-    first = date_cls.fromisoformat(monday_of(monday))
-    return [(first + timedelta(days=i)).isoformat() for i in range(7)]
-
-
 def get_events(db: Session, start_date: str, end_date: str, owner: str = ""):
     """Việc trong khoảng ngày [start_date, end_date], sớm nhất lên trước.
 
@@ -303,11 +291,6 @@ def get_events(db: Session, start_date: str, end_date: str, owner: str = ""):
     return query.order_by(models.ScheduleEvent.date,
                           models.ScheduleEvent.start,
                           models.ScheduleEvent.id).all()
-
-
-def get_week_events(db: Session, monday: str, owner: str = ""):
-    days = week_days(monday)
-    return get_events(db, days[0], days[-1], owner)
 
 
 def get_event(db: Session, id: int):
